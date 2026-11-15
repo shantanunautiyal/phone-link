@@ -61,7 +61,19 @@ jobs:
       - name: Build the DMG
         run: |
           export DEVELOPER_DIR="$(xcode-select -p)"
-          just dmg
+          # Xcode 26's Explicitly Built Modules (default) break the module-cache resolution of the
+          # camera extension in this project; build with implicit modules, which is what the project
+          # was built with before Xcode 26.
+          xcodebuild \
+            -project gui/PhoneLink.xcodeproj \
+            -scheme PhoneLink \
+            -configuration Release \
+            -derivedDataPath gui/build/DerivedData \
+            SWIFT_ENABLE_EXPLICIT_MODULES=NO \
+            build
+          gui/scripts/make-dmg.sh \
+            gui/build/DerivedData/Build/Products/Release/PhoneLink.app \
+            gui/build
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
