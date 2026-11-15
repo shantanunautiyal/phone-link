@@ -96,10 +96,10 @@ public final class MirrorPresenterAdapter: MirrorPresenter, @unchecked Sendable 
     }
 
     public func videoFrame(sessionId: String, data: Data, keyframe: Bool) -> Bool {
-        let stream: VideoStream = lock.withLock { stream(sessionId) }
-        let picture: CVPixelBuffer? = stream.decoding.withLock { stream.decoder.decode(data) }
+        let videoStream: VideoStream = lock.withLock { stream(sessionId) }
+        let picture: CVPixelBuffer? = videoStream.decoding.withLock { videoStream.decoder.decode(data) }
         guard let picture else { return false }
-        guard let sink = lock.withLock({ stream.sink }) else { return false }
+        guard let sink = lock.withLock({ videoStream.sink }) else { return false }
         return sink.present(picture)
     }
 
