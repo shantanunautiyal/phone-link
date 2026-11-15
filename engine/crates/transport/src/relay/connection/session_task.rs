@@ -83,13 +83,23 @@ pub(super) async fn read_frames(
         return end;
     }
 
+    // The transfer holds: the hub connections watch the count, so a transfer's start or end wakes
+    // this reader to recompute the silence deadline.
+    let mut transfer_holds = conn.shared.transfer_holds.subscribe();
+
     loop {
-        let deadline = timeout_at();
+        // A transfer hold keeps the connection alive through silence: the transfers' bytes ride the
+        // Nano connections, so the hub may have nothing to say for longer than the server timeout.
+        let held = *transfer_holds.borrow() > 0;
+        let deadline = if held { None } else { Some(timeout_at()) };
         // Unbiased: neither a burst of inbound frames nor the timer starves the other.
         tokio::select! {
             _ = session.cancel.cancelled() => return SessionEnd::Stopped,
             end = &mut *writer_end => {
                 return end.unwrap_or_else(|_| SessionEnd::Lost("the WebSocket writer ended".into()));
+            }
+            _ = transfer_holds.changed() => {
+                // A transfer started or ended: recompute the deadline (the loop re-reads the count).
             }
             message = stream.next() => {
                 match message {
@@ -108,9 +118,15 @@ pub(super) async fn read_frames(
                     return end;
                 }
             }
-            _ = tokio::time::sleep_until(deadline) => {
-                // Bytes that arrived after `deadline` was computed move it.
-                if timeout_at() <= Instant::now() {
+            _ = async {
+                match deadline {
+                    Some(d) => tokio::time::sleep_until(d).await,
+                    None => std::future::pending().await,
+                }
+            } => {
+                // Bytes that arrived after `deadline` was computed move it. Re-read the hold fresh: a
+                // transfer may have started while this deadline was sleeping.
+                if *transfer_holds.borrow() == 0 && timeout_at() <= Instant::now() {
                     return SessionEnd::Lost(format!("nothing received from the hub for {server_timeout:?}"));
                 }
             }

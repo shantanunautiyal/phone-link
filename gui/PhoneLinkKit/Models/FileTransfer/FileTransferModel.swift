@@ -169,8 +169,19 @@ public final class FileTransferModel {
     public var receiveStatus: String? {
         guard let receive = transfers.receive else { return nil }
         if receive.starting { return String(localized: "Your phone is sending files…") }
+        if receive.bytesTotal > 0 {
+            let done = ByteCountFormatter.string(fromByteCount: Int64(receive.bytesDone), countStyle: .file)
+            let total = ByteCountFormatter.string(fromByteCount: Int64(receive.bytesTotal), countStyle: .file)
+            return String(localized: "Receiving \(done) of \(total)")
+        }
         let count = receive.fileNames.count
         return count == 1 ? String(localized: "Receiving \(receive.fileNames[0])") : String(localized: "Receiving \(count) files")
+    }
+
+    /// The running receive's progress (0–1) while bytes are arriving; `nil` before.
+    public var receiveFraction: Double? {
+        guard let receive = transfers.receive, !receive.starting, receive.bytesTotal > 0 else { return nil }
+        return Double(receive.bytesDone) / Double(receive.bytesTotal)
     }
 
     /// The window send under way, for tests to wait on.

@@ -6,7 +6,7 @@
 use std::time::{Duration, SystemTime};
 
 use async_trait::async_trait;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
 use crate::codec::hub::MultiplexPacket;
@@ -231,6 +231,40 @@ pub enum RelayEvent {
     HubState { env: Environment, state: HubState },
     /// An `OnConnected` payload arrived.
     OnConnected { env: Environment, region: Option<String> },
+}
+
+/// A hold on the hub connections' liveness.
+///
+/// While a transfer is running, its bytes ride the Nano connection, not the hub, so the hub may
+/// legitimately be silent for longer than its server timeout. A [`TransferHoldGuard`] keeps the hub
+/// connections from ending for silence; dropping it ends the hold. The hold count lives in a `watch`
+/// channel so the hub connections wake and re-read it when it changes.
+#[derive(Clone)]
+pub struct TransferHoldGuard {
+    holds: watch::Sender<usize>,
+}
+
+impl TransferHoldGuard {
+    /// Creates a guard that counts one active hold; only [`TransferHold`] implementations should
+    /// call this. The count is published, waking the hub connections that watch it.
+    pub fn new(holds: watch::Sender<usize>) -> Self {
+        let next = holds.borrow().wrapping_add(1);
+        holds.send_replace(next);
+        Self { holds }
+    }
+}
+
+impl Drop for TransferHoldGuard {
+    fn drop(&mut self) {
+        let next = self.holds.borrow().wrapping_sub(1);
+        self.holds.send_replace(next);
+    }
+}
+
+/// Controls the hub connections' liveness holds, for the features that need them.
+pub trait TransferHold: Send + Sync {
+    /// Begins a hold; the returned guard ends it when dropped. Holds nest: each guard counts once.
+    fn hold(&self) -> TransferHoldGuard;
 }
 
 /// Control of the hub connections, used by the per-partner connection's attempts.

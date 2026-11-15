@@ -165,6 +165,7 @@ impl StatusWorld {
             responses: NotificationRouter::new(),
             stores: StoreLocation::Memory,
             tap: MemoryTap::new(),
+            transfer_hold: None,
         };
 
         let pc = FixedPcStatus::new(PcState::default());

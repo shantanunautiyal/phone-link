@@ -336,6 +336,7 @@ impl ClipWorld {
             responses: NotificationRouter::new(),
             stores: setup.stores,
             tap: MemoryTap::new(),
+            transfer_hold: None,
         };
 
         let pasteboard = setup.pasteboard.unwrap_or_default();

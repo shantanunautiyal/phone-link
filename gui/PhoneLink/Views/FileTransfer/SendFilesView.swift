@@ -25,8 +25,7 @@ struct SendFilesView: View {
                 SendOutcomeView(model: model, outcome: outcome)
             }
             if let receiving = model.receiveStatus {
-                Label(receiving, systemImage: "arrow.down.circle")
-                    .foregroundStyle(.secondary)
+                ReceiveProgressView(model: model, status: receiving)
             }
         }
         .padding(16)
@@ -112,6 +111,37 @@ private struct SendProgressView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 170)
+    }
+}
+
+/// The running receive: the file or files, what is happening, and the progress.
+private struct ReceiveProgressView: View {
+    let model: FileTransferModel
+    let status: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let names = model.transfers.receive?.fileNames, !names.isEmpty {
+                Text(names.count == 1 ? names[0] : String(localized: "\(names.count) files"))
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            if let fraction = model.receiveFraction {
+                ProgressView(value: fraction)
+            } else {
+                ProgressView()
+                    .progressViewStyle(.linear)
+            }
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.circle")
+                    .foregroundStyle(.secondary)
+                Text(status)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
     }
 }
 

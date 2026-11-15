@@ -64,6 +64,7 @@ pub fn feature_world_at(h: &Harness, stores: StoreLocation, item: DeviceInfoItem
         responses: responses.clone(),
         stores,
         tap: MemoryTap::new(),
+        transfer_hold: None,
     };
 
     FeatureWorld { env, notifier, peers, responses, switches, clock }

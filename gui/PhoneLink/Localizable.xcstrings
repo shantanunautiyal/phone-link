@@ -6513,6 +6513,22 @@
         }
       }
     },
+    "Receiving %@ of %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Receiving %1$@ of %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 중 %2$@ 받는 중"
+          }
+        }
+      }
+    },
     "Receiving %lld files": {
       "localizations": {
         "en": {

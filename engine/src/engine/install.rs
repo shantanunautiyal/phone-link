@@ -7,7 +7,7 @@ use crate::features::remote_control::DeviceListRefresh;
 use crate::features::shared::nano_channels::NanoShareChannels;
 use crate::features::shared::peers::DisplayedPeers;
 use crate::features::{FeatureEnv, Features, PeerDirectory};
-use crate::seams::{PartnerSessionControl, TokenSource};
+use crate::seams::{PartnerSessionControl, TokenSource, TransferHold};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -37,6 +37,7 @@ impl EngineCore {
             responses: self.responses.clone(),
             stores: self.feature_edges.stores.clone(),
             tap: self.tap.clone(),
+            transfer_hold: Some(self.relay.clone() as Arc<dyn TransferHold>),
         };
 
         // The CDEH features run over the CDEH identity's connection, its device list and its platform

@@ -238,6 +238,9 @@ impl Inner {
     }
 
     async fn run_receive(self: Arc<Self>, peer: PeerDevice) {
+        // The receive rides the Nano connection, not the hub: hold the hub connections' liveness so
+        // their silence does not end the session mid-transfer.
+        let _hold = self.env.transfer_hold.as_ref().map(|h| h.hold());
         let phone = peer.client.clone();
         self.show_folder_setting(&phone);
 

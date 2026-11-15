@@ -103,6 +103,7 @@ impl SnipWorld {
             responses: responses.clone(),
             stores: StoreLocation::Memory,
             tap: MemoryTap::new(),
+            transfer_hold: None,
         };
 
         let answer: Arc<Mutex<DrmAnswer>> =

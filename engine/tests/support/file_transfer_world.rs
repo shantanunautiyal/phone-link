@@ -180,6 +180,7 @@ impl ShareWorld {
             responses: responses.clone(),
             stores: StoreLocation::Memory,
             tap: MemoryTap::new(),
+            transfer_hold: None,
         };
 
         let answer: Arc<Mutex<DrmAnswer>> = Arc::new(Mutex::new(Box::new(grant_all)));

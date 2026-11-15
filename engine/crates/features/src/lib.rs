@@ -15,7 +15,7 @@ use std::sync::Arc;
 use phonelink_app::{AppError, AppLayer};
 use phonelink_core::config::EngineConfig;
 use phonelink_core::edge::{EdgeError, Edges};
-use phonelink_core::seams::PartnerSessionControl;
+use phonelink_core::seams::{PartnerSessionControl, TransferHold};
 use phonelink_core::tap::Tap;
 use phonelink_core::types::DcgClient;
 
@@ -47,6 +47,9 @@ pub struct FeatureEnv {
     pub responses: Arc<NotificationRouter>,
     pub stores: StoreLocation,
     pub tap: Tap,
+    /// Holds the hub connections' liveness while a transfer runs (`None` in tests that have no hub
+    /// connection).
+    pub transfer_hold: Option<Arc<dyn TransferHold>>,
 }
 
 /// A feature could not be installed (or an operation broke a local invariant).

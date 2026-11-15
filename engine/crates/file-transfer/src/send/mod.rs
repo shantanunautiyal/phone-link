@@ -250,6 +250,9 @@ impl Inner {
         paths: Vec<PathBuf>,
         origin: SendOrigin,
     ) -> Result<u32, SendError> {
+        // The send rides the Nano connection, not the hub: hold the hub connections' liveness so
+        // their silence does not end the session mid-transfer.
+        let _hold = self.env.transfer_hold.as_ref().map(|h| h.hold());
         let phone = peer.client.clone();
 
         if !self.phone_enabled(&phone) {

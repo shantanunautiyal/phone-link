@@ -22,7 +22,7 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, watch};
 
 use phonelink_core::config::EngineConfig;
 use phonelink_core::edge::Reachability;
@@ -60,6 +60,10 @@ pub(crate) struct RelayShared {
     /// Session ids are unique across every connection of the manager, so a late frame of a closed
     /// connection's session can never pass the presence gate of a newer session.
     pub next_session_id: AtomicU64,
+    /// How many transfer holds are outstanding: a nonzero count keeps every hub connection alive
+    /// through silence (the transfers' bytes ride the Nano connections). The hub connections watch
+    /// it, so a change wakes them to re-read it.
+    pub transfer_holds: watch::Sender<usize>,
 }
 
 impl RelayShared {

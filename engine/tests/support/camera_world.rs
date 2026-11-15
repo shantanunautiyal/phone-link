@@ -222,6 +222,7 @@ impl CameraWorld {
             responses: NotificationRouter::new(),
             stores: StoreLocation::Memory,
             tap: MemoryTap::new(),
+            transfer_hold: None,
         };
 
         let answer: Arc<Mutex<DrmAnswer>> = Arc::new(Mutex::new(Box::new(phone_answers)));

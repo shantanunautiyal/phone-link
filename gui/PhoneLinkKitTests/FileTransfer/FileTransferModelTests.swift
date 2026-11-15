@@ -110,7 +110,8 @@ import PhoneLinkEngine
         hub.postStarted()
         #expect(model.isSending)
         #expect(model.sendFraction == 0.25)
-        #expect(model.receiveStatus == "Receiving 2 files")
+        #expect(model.receiveFraction == 0)
+        #expect(model.receiveStatus == "Receiving Zero KB of 10 bytes")
 
         api.update {
             $0.transfers = FileTransfers(

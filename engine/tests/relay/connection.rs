@@ -17,7 +17,7 @@ use fake_hub::{
 use fixtures::{Harness, PHONE, drain_events, ident, next_event, phone};
 use phonelink_engine::codec::dcg_packet::Ack;
 use phonelink_engine::codec::hub::{self, method};
-use phonelink_engine::seams::{HubControl, HubLink, RelayEvent, TokenError, WakeHub};
+use phonelink_engine::seams::{HubControl, HubLink, RelayEvent, TokenError, TransferHold, WakeHub};
 use phonelink_engine::tap::{Direction, TapLayer};
 use phonelink_engine::types::{
     ConnectReason, DcgClient, Environment, HubSendResult, HubState, OpenStatus, PartnerDisconnectReason, TraceContext,
@@ -477,6 +477,31 @@ async fn hub_pings_keep_the_connection_alive() {
     assert!(!session.is_closed());
     assert!(drain_events(&mut h.events).iter().all(|e| !is_state(HubState::Reconnecting)(e)));
     assert_eq!(h.relay.hub_state(Environment::Prod), HubState::Connected);
+}
+
+#[tokio::test]
+async fn a_transfer_hold_keeps_the_connection_alive_through_silence() {
+    let mut h = Harness::new(|c| {
+        c.relay.keep_alive = Duration::from_millis(100);
+        c.relay.server_timeout = Duration::from_millis(400);
+        c.relay.reconnect_delays = vec![Duration::from_secs(30)];
+    })
+    .await;
+
+    let session = h.open_session().await;
+
+    // No silence longer than three server timeouts ends the session while a hold is held.
+    let hold = h.relay.hold();
+    tokio::time::sleep(3 * Duration::from_millis(400) + Duration::from_millis(200)).await;
+    let events = drain_events(&mut h.events);
+    assert!(!session.is_closed(), "the hold kept the connection alive through silence");
+    assert_eq!(h.relay.hub_state(Environment::Prod), HubState::Connected);
+    assert!(events.iter().all(|e| !is_state(HubState::Reconnecting)(e)));
+
+    // Dropping the hold restores the server timeout: silence now ends the connection.
+    drop(hold);
+    next_event(&mut h.events, 3 * SECOND, is_state(HubState::Reconnecting)).await;
+    assert!(session.wait_closed(2 * SECOND).await);
 }
 
 // ------------------------------------------------------------------------------------------------

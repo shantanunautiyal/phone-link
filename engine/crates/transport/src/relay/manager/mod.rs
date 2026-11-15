@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, watch};
 
 use super::connection::{ConnectionParams, HubConnection};
 use super::negotiate::HTTP_TIMEOUT;
@@ -22,7 +22,10 @@ use phonelink_core::codec::hub::{self, MultiplexPacket, OnConnectedPayload};
 use phonelink_core::config::EngineConfig;
 use phonelink_core::edge::Reachability;
 use phonelink_core::identification::ClientIdentification;
-use phonelink_core::seams::{HubControl, HubLink, HubRegionTimeout, PacketSink, RelayEvent, TokenSource, WakeHub};
+use phonelink_core::seams::{
+    HubControl, HubLink, HubRegionTimeout, PacketSink, RelayEvent, TokenSource, TransferHold, TransferHoldGuard,
+    WakeHub,
+};
 use phonelink_core::sync::{MutexExt, RwLockExt};
 use phonelink_core::tap::Tap;
 use phonelink_core::types::{
@@ -58,6 +61,7 @@ impl RelayManager {
         let http = phonelink_core::net::http_client(HTTP_TIMEOUT)
             .expect("building the negotiate HTTP client cannot fail with the compiled-in TLS backend");
 
+        let (transfer_holds, _) = watch::channel(0usize);
         let shared = Arc::new(RelayShared {
             config,
             ident,
@@ -69,6 +73,7 @@ impl RelayManager {
             packet_sink: RwLock::new(None),
             keys: Mutex::new(HashSet::new()),
             next_session_id: std::sync::atomic::AtomicU64::new(0),
+            transfer_holds,
         });
 
         let slots = Environment::ALL
@@ -283,6 +288,14 @@ impl WakeHub for RelayManager {
 impl HubOpener for RelayManager {
     async fn open_for(&self, partner: &DcgClient, reason: ConnectReason, trace: &TraceContext) -> Opened {
         self.open_with_trace(partner, reason, trace.clone()).await
+    }
+}
+
+/// The transfer hold: while a guard is held, a nonzero count keeps every hub connection alive through
+/// silence (the transfers' bytes ride the Nano connections).
+impl TransferHold for RelayManager {
+    fn hold(&self) -> TransferHoldGuard {
+        TransferHoldGuard::new(self.shared.transfer_holds.clone())
     }
 }
 
