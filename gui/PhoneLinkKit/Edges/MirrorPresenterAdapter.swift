@@ -43,7 +43,7 @@ public final class MirrorPresenterAdapter: MirrorPresenter, @unchecked Sendable 
 
     /// Session `sessionId`'s window closed: its decoder goes with it.
     public func detach(_ sessionId: String) {
-        let stream = lock.withLock { streams.removeValue(forKey: sessionId) }
+        let stream: VideoStream? = lock.withLock { streams.removeValue(forKey: sessionId) }
         if let stream {
             stream.decoding.withLock { stream.decoder.reset() }
         }
@@ -96,7 +96,7 @@ public final class MirrorPresenterAdapter: MirrorPresenter, @unchecked Sendable 
     }
 
     public func videoFrame(sessionId: String, data: Data, keyframe: Bool) -> Bool {
-        let stream = lock.withLock { stream(sessionId) }
+        let stream: VideoStream = lock.withLock { stream(sessionId) }
         let picture: CVPixelBuffer? = stream.decoding.withLock { stream.decoder.decode(data) }
         guard let picture else { return false }
         guard let sink = lock.withLock({ stream.sink }) else { return false }
@@ -104,7 +104,7 @@ public final class MirrorPresenterAdapter: MirrorPresenter, @unchecked Sendable 
     }
 
     public func resetVideo(sessionId: String) {
-        let stream = lock.withLock { streams[sessionId] }
+        let stream: VideoStream? = lock.withLock { streams[sessionId] }
         if let stream {
             stream.decoding.withLock { stream.decoder.reset() }
         }
@@ -112,7 +112,7 @@ public final class MirrorPresenterAdapter: MirrorPresenter, @unchecked Sendable 
 
     public func audioStarted(packageName: String, format: AudioStreamFormat) {
         let player = MirrorAudioPlayer(packageName: packageName, format: format)
-        let replaced = lock.withLock {
+        let replaced: MirrorAudioPlayer? = lock.withLock {
             let old = players.removeValue(forKey: packageName)
             if let player { players[packageName] = player }
             return old
