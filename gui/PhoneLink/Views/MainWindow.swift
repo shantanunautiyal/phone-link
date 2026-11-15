@@ -924,6 +924,16 @@ private struct MainContentPane: View {
                 // Center Segmented Toolbar Capsule (All tabs: Notifications, Messages, Photos, Apps, Calls, Contacts + Settings)
                 HStack(spacing: 3) {
                     ForEach(primarySections) { s in
+                        let isSelected = section == s
+                        let iconColor: Color = isSelected
+                            ? (colorScheme == .dark ? Color.white : Color.accentColor)
+                            : (colorScheme == .dark ? Color.white.opacity(0.65) : Color.primary.opacity(0.65))
+                        let capsuleFill: Color = colorScheme == .dark
+                            ? Color.white.opacity(0.20)
+                            : Color.accentColor.opacity(0.12)
+                        let capsuleStroke: Color = colorScheme == .dark
+                            ? Color.white.opacity(0.15)
+                            : Color.accentColor.opacity(0.20)
                         Button {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
                                 section = s
@@ -932,28 +942,15 @@ private struct MainContentPane: View {
                             ZStack(alignment: .topTrailing) {
                                 Image(systemName: icon(for: s))
                                     .font(.system(size: 12.5, weight: .medium))
-                                    .foregroundStyle(
-                                        section == s
-                                            ? (colorScheme == .dark ? Color.white : Color.accentColor)
-                                            : (colorScheme == .dark ? Color.white.opacity(0.65) : Color.primary.opacity(0.65))
-                                    )
+                                    .foregroundStyle(iconColor)
                                     .frame(width: 30, height: 30)
                                     .background {
-                                        if section == s {
+                                        if isSelected {
                                             Capsule(style: .continuous)
-                                                .fill(
-                                                    colorScheme == .dark
-                                                        ? Color.white.opacity(0.20)
-                                                        : Color.accentColor.opacity(0.12)
-                                                )
+                                                .fill(capsuleFill)
                                                 .overlay {
                                                     Capsule(style: .continuous)
-                                                        .strokeBorder(
-                                                            colorScheme == .dark
-                                                                ? Color.white.opacity(0.15)
-                                                                : Color.accentColor.opacity(0.20),
-                                                            lineWidth: 0.8
-                                                        )
+                                                        .strokeBorder(capsuleStroke, lineWidth: 0.8)
                                                 }
                                         }
                                     }
