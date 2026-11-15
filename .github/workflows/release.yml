@@ -58,6 +58,14 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('engine/Cargo.lock') }}
 
+      - name: Pre-build the engine and its bindings
+        run: |
+          export DEVELOPER_DIR="$(xcode-select -p)"
+          # Generates gui/Generated/ (the uniffi Swift bindings and module map) and the release static
+          # library, so the Xcode build's own engine phase finds them ready and the Swift targets do
+          # not race it for the module map on a cold build.
+          ENGINE_PROFILE=release gui/scripts/build-engine.sh
+
       - name: Build the DMG
         run: |
           export DEVELOPER_DIR="$(xcode-select -p)"
