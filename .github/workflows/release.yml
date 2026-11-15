@@ -37,6 +37,16 @@ jobs:
         with:
           components: clippy
 
+      # The runner pre-installs rustup via Homebrew (/opt/homebrew/bin), so the toolchain action
+      # reuses it and cargo lands there. The engine build script looks for cargo strictly at
+      # ~/.cargo/bin; link it there too.
+      - name: Expose cargo at ~/.cargo/bin
+        run: |
+          mkdir -p "$HOME/.cargo/bin"
+          ln -sfn "$(command -v cargo)" "$HOME/.cargo/bin/cargo"
+          ln -sfn "$(command -v rustc)" "$HOME/.cargo/bin/rustc"
+          ln -sfn "$(command -v rustup)" "$HOME/.cargo/bin/rustup"
+
       - name: Install just
         uses: extractions/setup-just@v2
 
