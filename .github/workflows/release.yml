@@ -38,7 +38,7 @@ jobs:
           components: clippy
 
       - name: Install just
-        uses: casey/just-action@v2
+        uses: extractions/setup-just@v2
 
       - name: Cache cargo registry
         uses: actions/cache@v4
