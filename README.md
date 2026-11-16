@@ -6,7 +6,7 @@
 
 <p align="center">Your Android phone, on your Mac.</p>
 
-<p align="center"><img src="docs/images/hero.png" alt="The Phone Link window with the notification list, and its Settings window"></p>
+<p align="center"><img src="phonelink.png" width="720" alt="Phone Link for macOS"></p>
 
 Connects through Microsoft's Link to Windows app on your phone.
 
@@ -22,41 +22,20 @@ sponsored, or approved by, Microsoft Corporation.
   in Settings › Calls.
 - Browse your phone's contacts and write to them.
 - Browse recent photos.
-- Mirror your phone's screen, or one app, in a window.
+- Mirror your phone's screen, or one app, in a window. **Desktop View** runs an app in the phone's
+  expanded tablet layout — the phone itself renders its large-screen, two-pane layouts — and a Rotate
+  menu turns the screen a quarter turn at a time.
 - Use your phone's camera as a webcam.
 - Open your phone's storage in Finder.
 - Send files both ways. Files from your phone go to Downloads › Mobile Devices.
 - Copy text or an image on one device and paste it on the other.
 - Pause or skip what your phone is playing.
 - See battery and signal, set Do Not Disturb or the ringer, ring your phone, or join its hotspot from
-  the menu bar.
+  the menu bar's glass popover.
+- The sidebar always shows Do Not Disturb and Ringer, with a kebab button that opens the same floating
+  controls panel.
 - Let your phone lock, sleep, restart or shut down your Mac. To stop this, turn off Allow the phone
   to control this Mac in Settings.
-
-<table>
-  <tr>
-    <td><img src="docs/images/notifications.png" alt="Notifications"></td>
-    <td><img src="docs/images/messages.png" alt="Messages"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/calls.png" alt="Calls"></td>
-    <td><img src="docs/images/contacts.png" alt="Contacts"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/incoming-call.png" alt="The incoming-call popup"></td>
-    <td><img src="docs/images/call-window.png" alt="The call window"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/photos.png" alt="Photos"></td>
-    <td><img src="docs/images/apps.png" alt="Apps"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/mirroring.png" alt="Phone screen and apps"></td>
-    <td><img src="docs/images/camera.png" alt="The phone as a camera"></td>
-  </tr>
-</table>
-
-More screenshots, including Settings, are in [docs/screenshots.md](docs/screenshots.md).
 
 ## Differences from Windows
 
