@@ -160,6 +160,14 @@ impl Inner {
         }
         plan.upserts = items.iter().map(|(item, text, op)| (item, *text, *op)).collect();
 
+        if !plan.session_changes.is_empty() {
+            // The phone's notification listener restarted (the app being opened to share a file,
+            // an update, the listener rebinding). The Mac's list is the user's history and stays
+            // until the phone removes a notification: purging it here lost every card whenever the
+            // phone app came to the foreground.
+            debug!(sessions = plan.session_changes.len(), "notification session changed; the stored list stays");
+        }
+
         let effects = match self.db(phone).and_then(|db| store::apply_batch(&db, &plan)) {
             Ok(effects) => effects,
             Err(e) => {
@@ -175,9 +183,9 @@ impl Inner {
         Processed::Answer { answer: simple_answer(result_code::SUCCESS), completed }
     }
 
-    /// Withdraws what the batch deleted and presents its new items: first the session changes'
-    /// rows, then the alerts for operation-1 items whose key is still stored, then the codes the
-    /// upserted items offer, then the removed rows.
+    /// Withdraws what the batch deleted and presents its new items: the alerts for operation-1
+    /// items whose key is still stored, then the codes the upserted items offer, then the removed
+    /// rows.
     fn after_batch(
         &self,
         app: &AppLayer,
@@ -185,8 +193,6 @@ impl Inner {
         items: &[(NotificationItem, &str, i32)],
         effects: &BatchEffects,
     ) {
-        self.withdraw(phone, effects.purged.iter().map(|r| r.key.clone()));
-
         let removed: HashSet<&str> = effects.removed.iter().map(|r| r.key.as_str()).collect();
         let candidates: Vec<(&NotificationItem, bool)> = items
             .iter()
@@ -209,7 +215,7 @@ impl Inner {
         }
 
         self.withdraw(phone, effects.removed.iter().map(|r| r.key.clone()));
-        if !effects.purged.is_empty() || !effects.upserted.is_empty() || !effects.removed.is_empty() {
+        if !effects.upserted.is_empty() || !effects.removed.is_empty() {
             self.emit(NotificationsEvent::ListChanged { phone: phone.clone() });
         }
     }

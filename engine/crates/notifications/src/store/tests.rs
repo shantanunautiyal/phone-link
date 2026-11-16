@@ -32,7 +32,7 @@ fn upserts_keep_pinned_state_and_local_id() {
 }
 
 #[test]
-fn session_change_matches_case_insensitively_and_literally() {
+fn a_session_change_keeps_the_stored_list_and_its_queue() {
     let db = db();
     let (a, ja) = item("0|S1|x", 1);
     let (b, jb) = item("0|s1|y", 2);
@@ -48,16 +48,17 @@ fn session_change_matches_case_insensitively_and_literally() {
     enqueue(&db, "r1", "0|S2|z", "0", "{}", 0).unwrap();
     enqueue(&db, "r2", "0|s1|y", "inline_reply", "{}", 0).unwrap();
 
-    // `_` is literal: "S_1" does not match "S1".
+    // The phone's listener restarting (operation 7) is not the user dismissing anything: every row
+    // stays, and so does its queued action.
     let effects = apply_batch(&db, &BatchPlan { session_changes: vec!["S1"], ..Default::default() }).unwrap();
-    let mut purged: Vec<_> = effects.purged.iter().map(|r| r.key.as_str()).collect();
-    purged.sort_unstable();
-    assert_eq!(purged, ["0|S2|z", "0|S_1|w"]);
+    assert!(effects.upserted.is_empty() && effects.removed.is_empty());
 
     let (keys, times) = keys_and_post_times(&db).unwrap();
-    assert_eq!(keys, ["0|s1|y", "0|S1|x"]);
-    assert_eq!(times, [2, 1]);
-    assert_eq!(next_unsent(&db).unwrap().unwrap().request_id, "r2");
+    let mut keys = keys.clone();
+    keys.sort_unstable();
+    assert_eq!(keys, ["0|S1|x", "0|S2|z", "0|S_1|w", "0|s1|y"]);
+    assert_eq!(times.len(), 4);
+    assert_eq!(next_unsent(&db).unwrap().unwrap().request_id, "r1");
 }
 
 #[test]

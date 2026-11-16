@@ -3,9 +3,10 @@
 //! It covers the notification rows, the action queue, the settings rows and the feature's per-phone
 //! values (PC permission, `NotificationsCapabilities`, "last updated", mutes, …).
 //!
-//! A batch's purges, upserts, removals and queue drops are one transaction ([`apply_batch`]).
+//! A batch's upserts, removals and queue drops are one transaction ([`apply_batch`]). A session
+//! change keeps the stored rows: the phone's listener restarting is not the user dismissing anything.
 
-use rusqlite::{OptionalExtension, Transaction, params};
+use rusqlite::{OptionalExtension, params};
 
 use phonelink_features::shared::db::{FeatureDb, StoreError};
 
@@ -153,15 +154,11 @@ pub fn set_state(db: &FeatureDb, key: &str, state: i32) -> Result<bool, StoreErr
     })
 }
 
-/// The ASCII-case-insensitive substring test of a session change (`%`/`_` literal).
-pub fn contains_ascii_ci(haystack: &str, needle: &str) -> bool {
-    haystack.to_ascii_lowercase().contains(&needle.to_ascii_lowercase())
-}
-
 /// What one batch changes, in application order.
 #[derive(Debug, Default)]
 pub struct BatchPlan<'a> {
-    /// The non-empty session ids of operation 7, in array order.
+    /// The non-empty session ids of operation 7, in array order. A session change only says the
+    /// phone's notification listener restarted; it does not remove anything on the Mac.
     pub session_changes: Vec<&'a str>,
     /// The well-formed items of operations 1 and 3, in array order, with their operation.
     pub upserts: Vec<(&'a NotificationItem, &'a str, i32)>,
@@ -181,8 +178,6 @@ pub struct Upserted {
 /// What a batch did to the store.
 #[derive(Debug, Default)]
 pub struct BatchEffects {
-    /// Rows deleted by session changes.
-    pub purged: Vec<StoredRow>,
     pub upserted: Vec<Upserted>,
     /// Rows deleted by removals.
     pub removed: Vec<StoredRow>,
@@ -190,17 +185,17 @@ pub struct BatchEffects {
 
 /// Applies `plan` in one transaction.
 ///
-/// Session changes (rows and queued requests whose key does not contain the session id), then
-/// upserts (an existing key keeps its pinned state and local id), then removals with their queue
-/// drops.
+/// Session changes are noted but remove nothing: the phone's notification listener restarting (a
+/// share, the phone app being reopened) is not the user dismissing the list, and the Mac keeps its
+/// history until the phone removes the notifications one by one.
+///
+/// Then upserts (an existing key keeps its pinned state and local id), then removals with their
+/// queue drops.
 ///
 /// Nothing is kept when any step fails.
 pub fn apply_batch(db: &FeatureDb, plan: &BatchPlan<'_>) -> Result<BatchEffects, StoreError> {
     db.transaction(|tx| {
         let mut effects = BatchEffects::default();
-        for s in &plan.session_changes {
-            effects.purged.extend(purge_outside_session(tx, s)?);
-        }
 
         let mut stored_before: Vec<(String, bool)> = Vec::new();
         for (item, _, _) in &plan.upserts {
@@ -244,31 +239,6 @@ pub fn apply_batch(db: &FeatureDb, plan: &BatchPlan<'_>) -> Result<BatchEffects,
 
         Ok(effects)
     })
-}
-
-fn purge_outside_session(tx: &Transaction<'_>, session: &str) -> Result<Vec<StoredRow>, StoreError> {
-    let rows: Vec<StoredRow> = {
-        let mut st = tx.prepare(&format!("SELECT {ROW_COLUMNS} FROM notifications ORDER BY id"))?;
-        st.query_map([], row_of)?.collect::<rusqlite::Result<_>>()?
-    };
-
-    let mut purged = Vec::new();
-    for row in rows.into_iter().filter(|r| !contains_ascii_ci(&r.key, session)) {
-        tx.execute("DELETE FROM notifications WHERE id = ?1", [row.id])?;
-        purged.push(row);
-    }
-
-    let queued: Vec<(i64, String)> = {
-        let mut st = tx.prepare("SELECT id, external_id1 FROM phone_requests")?;
-        st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<rusqlite::Result<_>>()?
-    };
-
-    for (id, key) in queued {
-        if !contains_ascii_ci(&key, session) {
-            tx.execute("DELETE FROM phone_requests WHERE id = ?1", [id])?;
-        }
-    }
-    Ok(purged)
 }
 
 // ------------------------------------------------------------------------------------------------
