@@ -47,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var callWindow: NSPanel?
     private var updateWindow: NSWindow?
     private var mirrorWindows: MirrorWindows?
+    private var menuBar: MenuBarController?
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     /// Quitting was answered `terminateLater`; the reply is sent once.
     private var terminationRequested = false
@@ -310,6 +311,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.start()
         updates.start()
 
+        menuBar = MenuBarController(
+            makeIcon: { [weak self] in
+                let view = self.map { AnyView($0.environments(MenuBarStatusView())) } ?? AnyView(MenuBarStatusView())
+                return NSHostingView(rootView: view)
+            },
+            makePanelContent: { [weak self] in
+                let view = self.map { AnyView($0.environments(MenuBarPopoverView())) } ?? AnyView(MenuBarPopoverView())
+                return NSHostingView(rootView: view)
+            }
+        )
+        menuBar?.start()
+
         if UserDefaults.standard.object(forKey: PreferenceKeys.showWindowAtLaunch) as? Bool ?? true {
             showMainWindow()
         }
@@ -363,6 +376,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !terminationReplied else { return }
         terminationReplied = true
         NSApp.reply(toApplicationShouldTerminate: true)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        menuBar?.stop()
+        menuBar = nil
     }
 
     private func observeSystemEvents() {

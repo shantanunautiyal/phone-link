@@ -10957,6 +10957,126 @@
           }
         }
       }
+    },
+    "Allow Notifications": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림 허용"
+          }
+        }
+      }
+    },
+    "Link to Windows Turned Off": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link to Windows가 꺼져 있음"
+          }
+        }
+      }
+    },
+    "Not Connected": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 안 됨"
+          }
+        }
+      }
+    },
+    "Not Signed In": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 안 됨"
+          }
+        }
+      }
+    },
+    "Notifications from Phone Link": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phone Link의 알림"
+          }
+        }
+      }
+    },
+    "On This Mac": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac에서"
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정 열기"
+          }
+        }
+      }
+    },
+    "Phone Link shows the phone's notifications as macOS banners only when macOS allows the app to notify.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 앱 알림을 허용할 때만 Phone Link가 휴대폰 알림을 macOS 배너로 표시해요."
+          }
+        }
+      }
+    },
+    "See All": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 보기"
+          }
+        }
+      }
+    },
+    "Send Files…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 보내기…"
+          }
+        }
+      }
+    },
+    "macOS hasn't been asked to allow Phone Link to notify yet.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS에 아직 Phone Link의 알림을 허용하도록 요청하지 않았어요."
+          }
+        }
+      }
+    },
+    "macOS is blocking notifications for this app.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 이 앱의 알림을 차단하고 있어요."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

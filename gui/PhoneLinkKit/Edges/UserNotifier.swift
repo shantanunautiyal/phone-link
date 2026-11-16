@@ -109,6 +109,14 @@ public final class UserNotifier: NSObject, SystemNotifier, UNUserNotificationCen
         return Self.allowsPosting(status)
     }
 
+    /// The notification authorization status as the center reports it now (`nil` when it does not
+    /// answer in time): for the Settings pane's Mac-side permission row.
+    public func authorizationStatus() -> UNAuthorizationStatus? {
+        Self.answer(UNAuthorizationStatus.self) { done in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in done(settings.authorizationStatus) }
+        }
+    }
+
     /// Waits on the calling (engine) thread for an answer the center hands to its completion handler
     /// on a queue of its own; `nil` when none comes within `timeout`.
     static func answer<Value>(

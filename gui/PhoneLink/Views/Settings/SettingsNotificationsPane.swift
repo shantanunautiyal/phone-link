@@ -1,5 +1,6 @@
 import PhoneLinkKit
 import SwiftUI
+import UserNotifications
 
 /// Notifications: whether the phone's notifications show on this Mac, how each app's do, and the
 /// access the phone gives.
@@ -10,6 +11,13 @@ struct SettingsNotificationsPane: View {
     var body: some View {
         @Bindable var model = model
         Form {
+            Section {
+                MacNotificationPermissionRow()
+            } header: {
+                Text("On This Mac")
+            } footer: {
+                Text("Phone Link shows the phone's notifications as macOS banners only when macOS allows the app to notify.")
+            }
             if !model.isAvailable {
                 SettingsUnavailableNote()
             }
@@ -68,6 +76,68 @@ struct SettingsNotificationsPane: View {
         .onDisappear { model.setNotificationsPaneVisible(false) }
         // Again once the engine starts while the pane is open.
         .task(id: model.isAvailable) { await model.notificationsPaneAppeared() }
+    }
+}
+
+/// The Mac's permission for the app's notifications: what macOS reports, and a way to change it when a
+/// notification is not allowed (the app's ad-hoc builds often are — the fix is signing with an Apple
+/// Development identity from a free team).
+private struct MacNotificationPermissionRow: View {
+    @State private var status: UNAuthorizationStatus?
+
+    var body: some View {
+        LabeledContent {
+            switch status {
+            case .none:
+                Text("Checking…")
+                    .foregroundStyle(.secondary)
+            case .some(.authorized), .some(.provisional):
+                Text("Allowed")
+                    .foregroundStyle(.secondary)
+            case .some(.notDetermined):
+                Button("Allow Notifications") { requestAuthorization() }
+            default:
+                Button("Open System Settings") { openSystemSettings() }
+            }
+        } label: {
+            Text("Notifications from Phone Link")
+            if let status, !Self.allows(status) {
+                Text(status == .notDetermined
+                    ? "macOS hasn't been asked to allow Phone Link to notify yet."
+                    : "macOS is blocking notifications for this app.")
+            }
+        }
+        .task {
+            status = await Self.readStatus()
+        }
+    }
+
+    static func allows(_ status: UNAuthorizationStatus) -> Bool {
+        status == .authorized || status == .provisional
+    }
+
+    static func readStatus() async -> UNAuthorizationStatus? {
+        await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                continuation.resume(returning: settings.authorizationStatus)
+            }
+        }
+    }
+
+    private func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+            Task { @MainActor in
+                status = await Self.readStatus()
+            }
+        }
+    }
+
+    private func openSystemSettings() {
+        let bundleID = Bundle.main.bundleIdentifier ?? "dev.nlog.PhoneLink"
+        let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?bundleID=\(bundleID)")
+        if let url {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 

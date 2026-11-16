@@ -1,21 +1,13 @@
 import PhoneLinkKit
 import SwiftUI
 
-/// The app: a menu bar extra (the phone's status and quick controls), a Settings window, and the
-/// main and sign-in windows the app delegate opens on demand.
+/// The app: a Settings window, and the main and sign-in windows the app delegate opens on demand. The
+/// menu bar extra is a custom status item the app delegate owns (`MenuBarController`).
 @main
 struct PhoneLinkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var app
-    @AppStorage(PreferenceKeys.showMenuBarExtra) private var showMenuBarExtra = true
 
     var body: some Scene {
-        MenuBarExtra(isInserted: $showMenuBarExtra) {
-            app.environments(PhoneMenu())
-        } label: {
-            Label("Phone Link", image: "MenuBarIcon")
-        }
-        .menuBarExtraStyle(.menu)
-
         Settings {
             app.environments(SettingsView())
         }
