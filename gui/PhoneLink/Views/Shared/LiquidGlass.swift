@@ -3,10 +3,10 @@ import SwiftUI
 /// Liquid Glass helpers.
 ///
 /// macOS 26 adds `.glassEffect`, which anchors a glass shape *behind the view it is applied to* and
-/// draws the view's content over it. Because of that, the effect belongs on the content view, never
-/// on a bare `Shape` (a shape used as a view paints its default foreground — black — making the
-/// surface look opaque). Before macOS 26 each surface used a stacked material; these helpers pick the
-/// glass or the legacy stack per the running OS.
+/// draws the view's content over it. AirSync renders a glass-only surface as a `.clear`-filled shape
+/// under `.glassEffect` — a bare shape would paint its default foreground over the effect, so the
+/// clear fill is what lets the glass show. Before macOS 26 each surface used a stacked material;
+/// these helpers pick the glass or the legacy stack per the running OS.
 
 // MARK: - `.background(material, in: shape)` surfaces
 

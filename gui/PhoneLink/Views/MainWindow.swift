@@ -46,12 +46,12 @@ struct MainWindow: View {
                 .ignoresSafeArea()
 
             if #available(macOS 26, *) {
-                // A neutral veil over the window's translucency: no fixed color circles — Liquid Glass
-                // surfaces blur whatever is actually behind the window (the wallpaper/desktop).
+                // Only a whisper of a veil: Liquid Glass surfaces blur whatever is actually behind the
+                // window (the wallpaper/desktop). Heavier dimming reads as a painted background.
                 LinearGradient(
                     colors: colorScheme == .dark
-                        ? [Color.black.opacity(0.38), Color.black.opacity(0.24)]
-                        : [Color.white.opacity(0.18), Color.white.opacity(0.08)],
+                        ? [Color.black.opacity(0.20), Color.black.opacity(0.10)]
+                        : [Color.white.opacity(0.08), Color.white.opacity(0.03)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
