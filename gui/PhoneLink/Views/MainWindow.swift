@@ -46,34 +46,15 @@ struct MainWindow: View {
                 .ignoresSafeArea()
 
             if #available(macOS 26, *) {
-                // A rich backdrop for Liquid Glass to refract: accent glows over the window's
-                // translucency, dimmed just enough to keep content legible.
-                ZStack {
-                    LinearGradient(
-                        colors: [Color.accentColor.opacity(0.40), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    RadialGradient(
-                        colors: [Color.purple.opacity(0.28), .clear],
-                        center: .bottomTrailing,
-                        startRadius: 0,
-                        endRadius: 620
-                    )
-                    RadialGradient(
-                        colors: [Color.blue.opacity(0.22), .clear],
-                        center: .topTrailing,
-                        startRadius: 0,
-                        endRadius: 520
-                    )
-                    LinearGradient(
-                        colors: colorScheme == .dark
-                            ? [Color.black.opacity(0.45), Color.black.opacity(0.30)]
-                            : [Color.white.opacity(0.22), Color.white.opacity(0.10)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
+                // A neutral veil over the window's translucency: no fixed color circles — Liquid Glass
+                // surfaces blur whatever is actually behind the window (the wallpaper/desktop).
+                LinearGradient(
+                    colors: colorScheme == .dark
+                        ? [Color.black.opacity(0.38), Color.black.opacity(0.24)]
+                        : [Color.white.opacity(0.18), Color.white.opacity(0.08)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
                 .ignoresSafeArea()
             } else {
                 // Subtle dynamic glass tint (matches AirSync windowOpacity)
