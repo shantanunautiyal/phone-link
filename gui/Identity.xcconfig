@@ -7,4 +7,4 @@ PHONELINK_BUNDLE_ID = dev.nlog.PhoneLink
 // The GitHub repository, as owner/name, whose releases the app's updater offers (Settings › General ›
 // Updates) and that the About panel links to. Empty turns the updater off and leaves out the links: a fork
 // that publishes no releases of its own sets it empty or to its own repository.
-PHONELINK_UPDATE_REPOSITORY = nnnlog/phone-link
+PHONELINK_UPDATE_REPOSITORY = shantanunautiyal/phone-link

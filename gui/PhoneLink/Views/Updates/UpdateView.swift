@@ -111,8 +111,6 @@ struct UpdateView: View {
             switch model.installability {
             case .available:
                 String(localized: "You have version \(model.current.description). Phone Link relaunches after installing it, which briefly disconnects your phone.")
-            case .unsigned:
-                String(localized: "You have version \(model.current.description). This copy of Phone Link wasn't signed by its developer, so it can't check and install the update itself. Download it from its release page.")
             case let .notReplaceable(folder):
                 String(localized: "You have version \(model.current.description). Phone Link can't replace itself in \(folder). Move it to Applications, or download the update from its release page.")
             }

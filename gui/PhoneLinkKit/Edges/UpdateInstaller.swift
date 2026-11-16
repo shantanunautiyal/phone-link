@@ -7,8 +7,6 @@ private let log = AppLog(category: "updates")
 /// Whether this copy of the app can replace itself with a release.
 public enum Installability: Equatable, Sendable {
     case available
-    /// This copy has no team signature (an ad-hoc build), so a download cannot be checked against it.
-    case unsigned
     /// macOS runs this copy from a read-only place (App Translocation, a disk image), or its folder is
     /// not writable for this user.
     case notReplaceable(folder: String)
@@ -48,8 +46,10 @@ public protocol UpdateInstalling: Sendable {
 
 /// Installs a release over the running app bundle, the way dragging it to Applications would, after
 /// checking what it installs: GitHub's SHA-256 of the image, then that the app inside is this app (its
-/// bundle identifier), at the release's version and a higher build, signed with Developer ID by the team
-/// that signed the running app, and accepted by Gatekeeper.
+/// bundle identifier), at the release's version and a higher build. When the running app is signed with
+/// Developer ID by a team (the distributed builds), the staged app must match that signature and pass
+/// Gatekeeper; an unsigned copy (a local or ad-hoc build) skips those checks and trusts the release's
+/// SHA-256, which GitHub serves over TLS and records on upload.
 public struct UpdateInstaller: UpdateInstalling {
     private let bundle: URL
     private let bundleID: String
@@ -70,8 +70,6 @@ public struct UpdateInstaller: UpdateInstalling {
     }
 
     public func installability() -> Installability {
-        guard Self.teamIdentifier() != nil else { return .unsigned }
-
         let folder = bundle.deletingLastPathComponent()
         let files = FileManager.default
         if bundle.path.contains("/AppTranslocation/")
@@ -83,9 +81,9 @@ public struct UpdateInstaller: UpdateInstalling {
     }
 
     public func stage(_ release: AppRelease, progress: @escaping @Sendable (Double) -> Void) async throws -> StagedUpdate {
-        guard let team = Self.teamIdentifier() else {
-            throw UpdateInstallError.signature("this copy of Phone Link has no team signature")
-        }
+        // The running app's team, when a team signed it; `nil` for an ad-hoc build, whose updates are
+        // trusted by their SHA-256 alone.
+        let team = Self.teamIdentifier()
 
         let work = try workDirectory()
         defer { try? FileManager.default.removeItem(at: work) }
@@ -122,9 +120,13 @@ public struct UpdateInstaller: UpdateInstalling {
             try Self.checkInfo(
                 of: staged, bundleID: bundleID, version: release.version, aboveBuild: build
             )
-            try Self.checkSignature(of: staged, bundleID: bundleID, team: team)
-            try await Self.run("/usr/sbin/spctl", ["--assess", "--type", "execute", staged.path]) { status in
-                UpdateInstallError.signature("Gatekeeper rejects it (spctl status \(status))")
+            // A team-signed app verifies the update's signature and Gatekeeper acceptance; an ad-hoc
+            // copy checks only the image's SHA-256 (and the info above).
+            if let team {
+                try Self.checkSignature(of: staged, bundleID: bundleID, team: team)
+                try await Self.run("/usr/sbin/spctl", ["--assess", "--type", "execute", staged.path]) { status in
+                    UpdateInstallError.signature("Gatekeeper rejects it (spctl status \(status))")
+                }
             }
         } catch {
             try? FileManager.default.removeItem(at: staged.deletingLastPathComponent())
