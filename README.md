@@ -97,8 +97,12 @@ To sign with your own team, set it in `gui/Signing.local.xcconfig` as
 [`gui/Signing.xcconfig`](gui/Signing.xcconfig) describes. Without a team the app is signed ad-hoc, and
 macOS asks for keychain access again after every build.
 
-The camera requires a paid Apple Developer account and a provisioning profile with the System
-Extension capability. Everything else works without it.
+macOS's notification API refuses ad-hoc-signed builds (`Notifications are not allowed for this
+application`), so the phone's notifications arrive but never appear as banners. Signing with an Apple
+Development identity from any personal team (free) makes them work on that Mac; `Settings ›
+Notifications › On This Mac` shows the state and opens System Settings. A paid Developer ID
+certificate is needed only for other Macs' builds to notify. The camera requires a paid Apple Developer
+account and a provisioning profile with the System Extension capability. Everything else works without it.
 
 Builds for other Macs need a team with Developer ID certificates: `just distribute` signs one, and
 `just distribute-notarized` also notarizes it.
