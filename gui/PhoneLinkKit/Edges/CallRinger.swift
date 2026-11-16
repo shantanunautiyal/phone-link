@@ -7,12 +7,13 @@ public protocol CallRinging: AnyObject {
     func stop()
 }
 
-/// Rings with a system sound, repeated every two seconds until stopped. The phone's own ringtone
-/// cannot play on the Mac, because macOS opens no voice link to the phone.
+/// Rings with the macOS call-style ring (system `Glass` sound), repeated every three seconds until
+/// stopped. The phone's own ringtone cannot play on the Mac, because macOS opens no voice link to
+/// the phone.
 @MainActor
 public final class CallRinger: CallRinging {
-    private static let interval: TimeInterval = 2
-    private let sound = NSSound(named: "Ping")
+    private static let interval: TimeInterval = 3
+    private let sound = NSSound(named: "Glass") ?? NSSound(named: "Ping")
     private var timer: Timer?
 
     public init() {}
