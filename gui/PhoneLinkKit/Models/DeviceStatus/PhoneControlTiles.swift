@@ -82,12 +82,15 @@ extension DeviceStatusModel {
         )
     }
 
-    /// The Do Not Disturb tile; `nil` when the phone has no Do Not Disturb control.
+    /// The Do Not Disturb tile; shown once a phone is known and disabled while the phone has not
+    /// reported a Do Not Disturb control: the button stays in the UI either way.
     public var doNotDisturbTile: PhoneControlTile? {
-        guard let status, let control = status.doNotDisturb else { return nil }
         let title = String(localized: "Do Not Disturb")
         let symbol = "moon.fill"
-        guard status.live else { return PhoneControlTile(.doNotDisturb, title, symbol: symbol, isEnabled: false) }
+        guard let status else { return nil }
+        guard status.live, let control = status.doNotDisturb else {
+            return PhoneControlTile(.doNotDisturb, title, symbol: symbol, isEnabled: false)
+        }
 
         switch control.shown {
         case let .status(_, on):
@@ -101,12 +104,15 @@ extension DeviceStatusModel {
         }
     }
 
-    /// The ringer tile, naming the current mode; a click moves to the next one. `nil` when the phone
-    /// has no ringer control.
+    /// The ringer tile, naming the current mode; a click moves to the next one. Shown once a phone is
+    /// known and disabled while the phone has not reported a ringer control: the button stays in the
+    /// UI either way.
     public var ringerTile: PhoneControlTile? {
-        guard let status, let control = status.ringer else { return nil }
         let title = String(localized: "Ringer")
-        guard status.live else { return PhoneControlTile(.ringer, title, symbol: RingerMode.sound.symbol, isEnabled: false) }
+        guard let status else { return nil }
+        guard status.live, let control = status.ringer else {
+            return PhoneControlTile(.ringer, title, symbol: RingerMode.sound.symbol, isEnabled: false)
+        }
 
         func pending(_ mode: RingerMode) -> PhoneControlTile {
             PhoneControlTile(.ringer, title, state: String(localized: "Switching…"), symbol: mode.symbol, isBusy: true, isEnabled: false)

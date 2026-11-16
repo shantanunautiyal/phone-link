@@ -135,7 +135,9 @@ struct PhoneControlGroups: View {
     let separatesFirstGroup: Bool
 
     var body: some View {
-        let modes = deviceStatus.doNotDisturb != nil || deviceStatus.ringer != nil
+        // The mode controls show once a phone is known, whether or not it reports them: unavailable
+        // ones appear disabled.
+        let modes = deviceStatus.status != nil
         let reach = hotspot.item != nil || deviceStatus.ringMyPhone != nil
         let handoff = files.canSend || mirroring.isOffered
 
@@ -166,37 +168,44 @@ struct PhoneControlGroups: View {
 
     /// Any group shows.
     var showsAnything: Bool {
-        deviceStatus.doNotDisturb != nil || deviceStatus.ringer != nil || hotspot.item != nil
-            || deviceStatus.ringMyPhone != nil || files.canSend || mirroring.isOffered || (media.isShown && media.selected != nil)
+        deviceStatus.status != nil || hotspot.item != nil || deviceStatus.ringMyPhone != nil
+            || files.canSend || mirroring.isOffered || (media.isShown && media.selected != nil)
     }
 }
 
-/// The phone's Do Not Disturb and ringer controls; nothing while the phone offers neither.
+/// The phone's Do Not Disturb and ringer controls; shown once a phone is known, disabled while the
+/// phone offers neither.
 private struct PhoneModeItems: View {
     let deviceStatus: DeviceStatusModel
 
     var body: some View {
-        if let dnd = deviceStatus.doNotDisturb {
-            if let isOn = dnd.isOn {
-                Toggle(isOn: Binding(get: { isOn }, set: { _ in deviceStatus.toggleDoNotDisturb() })) {
+        if deviceStatus.status != nil {
+            if let dnd = deviceStatus.doNotDisturb {
+                if let isOn = dnd.isOn {
+                    Toggle(isOn: Binding(get: { isOn }, set: { _ in deviceStatus.toggleDoNotDisturb() })) {
+                        Label(dnd.title, systemImage: "moon")
+                    }
+                    .disabled(!dnd.isEnabled)
+                } else {
                     Label(dnd.title, systemImage: "moon")
                 }
-                .disabled(!dnd.isEnabled)
             } else {
-                Label(dnd.title, systemImage: "moon")
+                Label(String(localized: "Do Not Disturb"), systemImage: "moon")
             }
-        }
-        if let ringer = deviceStatus.ringer {
-            // A label followed by a text: SwiftUI makes the text the menu item's second line.
-            Button {
-                deviceStatus.cycleRingerMode()
-            } label: {
-                Label(ringer.title, systemImage: ringer.symbol)
-                if let hint = ringer.hint {
-                    Text(hint)
+            if let ringer = deviceStatus.ringer {
+                // A label followed by a text: SwiftUI makes the text the menu item's second line.
+                Button {
+                    deviceStatus.cycleRingerMode()
+                } label: {
+                    Label(ringer.title, systemImage: ringer.symbol)
+                    if let hint = ringer.hint {
+                        Text(hint)
+                    }
                 }
+                .disabled(!ringer.isEnabled)
+            } else {
+                Label(String(localized: "Ringer"), systemImage: "bell")
             }
-            .disabled(!ringer.isEnabled)
         }
     }
 }
