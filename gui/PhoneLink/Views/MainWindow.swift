@@ -422,6 +422,7 @@ private struct PhoneMockupView: View {
     @Environment(AppNavigator.self) private var navigator
     @Environment(EngineController.self) private var controller
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showActions = false
 
     private let phoneWidth: CGFloat = 216
     private let phoneHeight: CGFloat = 436
@@ -594,6 +595,38 @@ private struct PhoneMockupView: View {
                         }
                         .buttonStyle(.plain)
                         .help(controller.connected ? "Open Phone Screen Mirror" : "Phone not connected — click to pair")
+
+                        Button {
+                            showActions.toggle()
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.white)
+                                .frame(width: 34, height: 28)
+                                .background {
+                                    ZStack {
+                                        Capsule(style: .continuous)
+                                            .fill(Color.black.opacity(0.45))
+                                        Capsule(style: .continuous)
+                                            .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
+                                    }
+                                }
+                                .clipShape(Capsule(style: .continuous))
+                                .shadow(color: Color.black.opacity(0.30), radius: 2.5, x: 0, y: 1)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Phone controls")
+                        .accessibilityLabel("Phone controls")
+                        .popover(isPresented: $showActions) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Phone Controls")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                PhoneQuickActionsGrid()
+                            }
+                            .padding(14)
+                            .frame(width: 320)
+                        }
                     }
                     .padding(.bottom, 12)
                 }

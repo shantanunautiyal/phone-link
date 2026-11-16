@@ -11077,6 +11077,16 @@
           }
         }
       }
+    },
+    "Show the app in a landscape tablet layout": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱을 가로형 태블릿 레이아웃으로 표시"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

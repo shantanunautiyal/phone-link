@@ -27,12 +27,10 @@ struct MenuBarPopoverView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
             Divider()
-            if !quickActionList.isEmpty {
-                quickActions
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                Divider()
-            }
+            PhoneQuickActionsGrid()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            Divider()
             if !recent.isEmpty {
                 recentList
                     .padding(.vertical, 8)
@@ -121,52 +119,6 @@ struct MenuBarPopoverView: View {
         }
     }
 
-    // MARK: - Quick actions
-
-    private var quickActionList: [QuickAction] {
-        var actions: [QuickAction] = []
-        if let tile = deviceStatus.doNotDisturbTile {
-            actions.append(.init(kind: .doNotDisturb, title: tile.title, symbol: tile.symbol, state: tile.state, isOn: tile.isOn, isEnabled: tile.isEnabled))
-        }
-        if let tile = deviceStatus.ringerTile {
-            actions.append(.init(kind: .ringer, title: tile.title, symbol: tile.symbol, state: tile.state, isOn: false, isEnabled: tile.isEnabled))
-        }
-        if let tile = hotspot.tile {
-            actions.append(.init(kind: .hotspot, title: tile.title, symbol: tile.symbol, state: tile.state, isOn: tile.isOn, isEnabled: tile.isEnabled))
-        }
-        if let tile = deviceStatus.findPhoneTile {
-            actions.append(.init(kind: .findPhone, title: tile.title, symbol: tile.symbol, state: tile.state, isOn: tile.isOn, isEnabled: tile.isEnabled))
-        }
-        if files.canSend {
-            actions.append(.init(kind: .sendFiles, title: String(localized: "Send Files"), symbol: "arrow.up.doc", state: nil, isOn: false, isEnabled: true))
-        }
-        if mirroring.isOffered {
-            actions.append(.init(kind: .phoneScreen, title: String(localized: "Phone Screen"), symbol: "apps.iphone", state: nil, isOn: false, isEnabled: true))
-        }
-        return actions
-    }
-
-    private var quickActions: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
-            ForEach(quickActionList) { action in
-                QuickActionButton(action: action) { perform(action.kind) }
-            }
-        }
-    }
-
-    private func perform(_ kind: QuickAction.Kind) {
-        switch kind {
-        case .doNotDisturb: deviceStatus.toggleDoNotDisturb()
-        case .ringer: deviceStatus.cycleRingerMode()
-        case .findPhone: deviceStatus.findPhone()
-        case .hotspot: hotspot.toggle()
-        case .sendFiles: navigator.showSendFiles()
-        case .phoneScreen:
-            NSApp.activate()
-            mirroring.openPhoneScreen()
-        }
-    }
-
     // MARK: - Recent notifications
 
     private var recentList: some View {
@@ -194,10 +146,7 @@ struct MenuBarPopoverView: View {
                     navigator.showNotification(notification.key)
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: "app.badge")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 22)
+                        PhoneAppIcon(packageName: notification.packageName, size: 22)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(NotificationsModel.appName(of: notification))
                                 .font(.system(size: 12, weight: .medium))

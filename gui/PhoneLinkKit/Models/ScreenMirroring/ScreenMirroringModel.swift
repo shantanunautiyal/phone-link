@@ -183,6 +183,33 @@ public final class ScreenMirroringModel {
         session.screenLayout == 2 ? 1 : 2
     }
 
+    /// The window shows its app in the expanded (tablet) layout — the desktop presentation, where the
+    /// phone renders large-screen two-pane layouts.
+    public func isDesktop(_ session: MirrorSessionView) -> Bool {
+        session.screenLayout == 2
+    }
+
+    /// The desktop layout toggle is available for any connected app window. The phone's adaptive-layout
+    /// support decides whether the switch succeeds; the button stays visible either way.
+    public func canUseDesktopLayout(_ session: MirrorSessionView) -> Bool {
+        !session.phoneScreen && session.state == .connected
+    }
+
+    /// Toggles window `id`'s app between the phone (Compact) and the expanded tablet layout (the
+    /// desktop presentation): asks the phone to switch and applies it at once, without the
+    /// confirmation overlay.
+    public func toggleDesktop(_ session: MirrorSessionView) {
+        guard canUseDesktopLayout(session) else { return }
+        let turningOn = !isDesktop(session)
+
+        do {
+            try api.switchLayout(sessionId: session.id, layout: turningOn ? 2 : 1)
+            try api.confirmLayoutSwitch(sessionId: session.id, doNotAsk: false)
+        } catch {
+            fail("Couldn't Change the Layout", "screen layout not changed", error)
+        }
+    }
+
     /// The window shows Back: its phone screen or app is shown.
     public func showsBack(_ session: MirrorSessionView) -> Bool {
         session.state == .connected || session.state == .secureContent

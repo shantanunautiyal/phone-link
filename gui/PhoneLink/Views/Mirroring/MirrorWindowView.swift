@@ -416,17 +416,17 @@ private struct MirrorToolbar: ToolbarContent {
                 EmptyView()
             }
             MirrorRotationMenu(session: session)
-            if model.offersLayouts(session) {
-                let compact = session.screenLayout == 1
+            if model.canUseDesktopLayout(session) {
+                let desktop = model.isDesktop(session)
                 Button {
-                    model.switchLayout(session.id, to: model.otherLayout(session))
+                    model.toggleDesktop(session)
                 } label: {
                     Label(
-                        compact ? "Switch to Tablet Layout" : "Switch to Phone Layout",
-                        systemImage: compact ? "ipad.landscape" : "iphone"
+                        desktop ? "Exit Desktop View" : "Desktop View",
+                        systemImage: "desktopcomputer"
                     )
                 }
-                .help(compact ? "Switch to Tablet Layout" : "Switch to Phone Layout")
+                .help(desktop ? "Exit the desktop view" : "Show the app in a landscape tablet layout")
             }
             if model.status?.inputSupported == true {
                 Button {

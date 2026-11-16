@@ -32,7 +32,10 @@ final class MenuBarController: NSObject {
             let icon = makeIcon()
             icon.translatesAutoresizingMaskIntoConstraints = false
             button.addSubview(icon)
+            let size = icon.fittingSize
             NSLayoutConstraint.activate([
+                icon.widthAnchor.constraint(equalToConstant: size.width),
+                icon.heightAnchor.constraint(equalToConstant: size.height),
                 icon.centerXAnchor.constraint(equalTo: button.centerXAnchor),
                 icon.centerYAnchor.constraint(equalTo: button.centerYAnchor),
             ])
