@@ -43,6 +43,30 @@ struct MirrorDisplayTests {
         #expect(MirrorDisplay(rotation: -270).swapsSides)
     }
 
+    /// The user's quarter turns show a portrait screen in a landscape window: the video's sides swap, the
+    /// layer turns by the phone's rotation plus the user's, and a click maps back to the phone's screen.
+    @Test func theUsersQuarterTurnsTurnTheScreen() throws {
+        let turned = MirrorDisplay(videoSize: CGSize(width: 720, height: 1600), turns: 1)
+        #expect(turned.drawnRotation == -270, "a clockwise quarter turn on top of the phone's none")
+        #expect(turned.swapsSides)
+        #expect(turned.screenSize == CGSize(width: 1600, height: 720), "the turned video")
+        #expect(abs(turned.layerRotation - 3 * .pi / 2) < 1e-9)
+        #expect(turned.transform == MirrorDisplay.Transform(videoSize: CGSize(width: 720, height: 1600), rotation: -270))
+
+        let bounds = CGSize(width: 1600, height: 720)
+        // The drawn top-left corner is the phone's bottom-left after a clockwise quarter turn.
+        let topLeft = try #require(turned.normalized(CGPoint(x: 0, y: 0), in: bounds))
+        #expect(topLeft == CGPoint(x: 0, y: 1))
+        let centre = try #require(turned.normalized(CGPoint(x: 800, y: 360), in: bounds))
+        #expect(centre == CGPoint(x: 0.5, y: 0.5))
+
+        #expect(MirrorDisplay(rotation: -90, turns: 1).drawnRotation == 0, "the user's turn back to upright")
+        #expect(MirrorDisplay(turns: -1).quarterTurns == 3)
+        #expect(MirrorDisplay(turns: 2).deviceNormalized(.zero) == CGPoint(x: 1, y: 1))
+        #expect(MirrorDisplay(turns: 3).deviceNormalized(.zero) == CGPoint(x: 1, y: 0))
+        #expect(MirrorDisplay(turns: 4).quarterTurns == 0)
+    }
+
     /// The video sets the drawn screen; before it is known nothing is drawn, a new window opens with the
     /// phone record's resolution, and the navigation bar's room is measured against the current one.
     @Test func theVideoSetsTheScreen() {

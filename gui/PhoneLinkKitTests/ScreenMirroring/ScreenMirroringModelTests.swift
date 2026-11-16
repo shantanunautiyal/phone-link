@@ -55,8 +55,41 @@ struct ScreenMirroringModelTests {
         #expect(model.sessions.map(\.id) == ["s2"])
     }
 
-    @Test func aLaunchThePhoneAskedForShowsTheMainWindowOrItsApps() {
+    /// The window's screen turns a quarter at a time on top of the phone's own rotation, and a session
+    /// that ended keeps no turn.
+    @Test func aWindowTurnsAQuarterAtATime() {
+        let api = FakeScreenMirroring()
         let hub = EngineEventHub()
+        let windows = MirrorWindowLog()
+        let model = model(api, hub: hub, windows: windows)
+
+        api.sessionList = [mirrorSession("s1")]
+        hub.post(.screenMirroring(change: .sessionOpened(sessionId: "s1", packageName: "yourphone.phonescreen", phoneInitiated: false)))
+        let session = model.session("s1")!
+
+        #expect(model.turns(for: "s1") == 0)
+        #expect(model.display(session).drawnRotation == 0)
+        #expect(model.display(session).screenSize == CGSize(width: 720, height: 1600))
+
+        model.rotate("s1")
+        #expect(model.turns(for: "s1") == 1)
+        #expect(model.display(session).drawnRotation == -270)
+        #expect(model.display(session).screenSize == CGSize(width: 1600, height: 720), "a landscape window")
+
+        model.rotate("s1")
+        model.rotate("s1")
+        model.rotate("s1")
+        #expect(model.turns(for: "s1") == 0, "four quarter turns are the phone's own")
+
+        model.setTurns(3, for: "s1")
+        #expect(model.turns(for: "s1") == 3)
+
+        api.sessionList = []
+        hub.post(.screenMirroring(change: .sessionClosed(sessionId: "s1")))
+        #expect(model.turns(for: "s1") == 0)
+    }
+
+    @Test func aLaunchThePhoneAskedForShowsTheMainWindowOrItsApps() {        let hub = EngineEventHub()
         let windows = MirrorWindowLog()
         let model = model(FakeScreenMirroring(), hub: hub, windows: windows)
         hub.postStarted()

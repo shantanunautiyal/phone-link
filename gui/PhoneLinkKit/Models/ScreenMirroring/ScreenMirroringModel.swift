@@ -21,6 +21,9 @@ public final class ScreenMirroringModel {
     public private(set) var status: MirroringStatusView?
     /// The windows' sessions, in the order they opened.
     public private(set) var sessions: [MirrorSessionView] = []
+    /// The quarter turns each window's video is turned beyond the phone's rotation, clockwise: 0–3.
+    /// A window without an entry shows its screen as the phone does.
+    public private(set) var turns: [String: Int] = [:]
     /// Windows telling the user that their app does not let its audio be captured, for
     /// `captureNoticeLength`.
     public private(set) var captureNotices: Set<String> = []
@@ -115,6 +118,34 @@ public final class ScreenMirroringModel {
     public func title(for session: MirrorSessionView) -> String {
         if session.phoneScreen { return phoneDisplayName }
         return appName(session.packageName) ?? session.packageName
+    }
+
+    /// `session`'s display state as its window shows it: the phone's video and rotation, turned by the
+    /// quarter turns the user asked for.
+    public func display(_ session: MirrorSessionView) -> MirrorDisplay {
+        MirrorDisplay(session, turns: turns(for: session.id))
+    }
+
+    /// The quarter turns window `id` is turned by.
+    public func turns(for id: String) -> Int {
+        turns[id] ?? 0
+    }
+
+    /// Turns window `id`'s screen a quarter turn clockwise; four turns show it as the phone does. The
+    /// window reshapes for the turned video, and input follows the picture.
+    public func rotate(_ id: String) {
+        setTurns(turns(for: id) + 1, for: id)
+    }
+
+    /// Turns window `id`'s screen by `turns` quarter turns clockwise (0–3; four turns are the phone's
+    /// own).
+    public func setTurns(_ turns: Int, for id: String) {
+        let quarter = ((turns % 4) + 4) % 4
+        if quarter == 0 {
+            self.turns.removeValue(forKey: id)
+        } else {
+            self.turns[id] = quarter
+        }
     }
 
     /// What a window shows over its video.
@@ -681,6 +712,7 @@ public final class ScreenMirroringModel {
         captureAllowed[id] = nil
         hideCaptureNotice(id)
         activated.remove(id)
+        turns.removeValue(forKey: id)
     }
 
     private func openWindow(_ id: String) {

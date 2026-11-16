@@ -10,6 +10,10 @@ import PhoneLinkEngine
 /// to the video as drawn, which the engine scales to the device resolution. The part of the screen the
 /// phone says has content (a folded phone's half) is not used: the whole video shows. Rectangles here
 /// have their origin at the top left, y downwards.
+///
+/// The user can turn the video further, a quarter turn at a time (`turns`), to see a portrait screen in
+/// a landscape window; input positions are turned back to the phone's orientation, so a click still lands
+/// where it is drawn.
 public struct MirrorDisplay: Equatable, Sendable {
     /// The phone's screen in its current orientation, in pixels.
     public var deviceSize: CGSize?
@@ -19,6 +23,8 @@ public struct MirrorDisplay: Equatable, Sendable {
     public var videoSize: CGSize?
     /// Degrees to turn the video: 0, −90, −180 or −270 (negative = counter-clockwise on screen).
     public var rotation: Int
+    /// Quarter turns the user asked for on top of the phone's, clockwise: 0–3.
+    public var turns: Int
 
     /// What the video is drawn with: its decoded size and its rotation. A window fades the video out
     /// and in around a change of it (`MirrorVideoTransitions`).
@@ -31,15 +37,18 @@ public struct MirrorDisplay: Equatable, Sendable {
         deviceSize: CGSize? = nil,
         initialDeviceSize: CGSize? = nil,
         videoSize: CGSize? = nil,
-        rotation: Int = 0
+        rotation: Int = 0,
+        turns: Int = 0
     ) {
         self.deviceSize = deviceSize
         self.initialDeviceSize = initialDeviceSize
         self.videoSize = videoSize
         self.rotation = rotation
+        self.turns = turns
     }
 
-    public init(_ session: MirrorSessionView) {
+    /// `session`'s display state, turned `turns` quarter turns clockwise beyond the phone's rotation.
+    public init(_ session: MirrorSessionView, turns: Int = 0) {
         func size(_ s: MirrorSize?) -> CGSize? {
             guard let s, s.width > 0, s.height > 0 else { return nil }
             return CGSize(width: CGFloat(s.width), height: CGFloat(s.height))
@@ -49,13 +58,27 @@ public struct MirrorDisplay: Equatable, Sendable {
             deviceSize: size(session.deviceResolution),
             initialDeviceSize: size(session.initialDeviceResolution),
             videoSize: size(session.videoSize),
-            rotation: Int(session.rotation)
+            rotation: Int(session.rotation),
+            turns: turns
         )
+    }
+
+    /// The quarter turns the user asked for, as 0–3.
+    public var quarterTurns: Int {
+        let turns = turns % 4
+        return turns < 0 ? turns + 4 : turns
+    }
+
+    /// The rotation the video is drawn with: the phone's own plus the user's quarter turns, in 0, −90,
+    /// −180 or −270.
+    public var drawnRotation: Int {
+        let degrees = ((rotation + quarterTurns * 90) % 360 + 360) % 360
+        return degrees == 0 ? 0 : degrees - 360
     }
 
     /// The rotation turns the picture on its side.
     public var swapsSides: Bool {
-        (rotation / 90) % 2 != 0
+        (drawnRotation / 90) % 2 != 0
     }
 
     /// The video's size once rotated.
@@ -82,7 +105,7 @@ public struct MirrorDisplay: Equatable, Sendable {
 
     /// The video's transform; `nil` before its size is known.
     public var transform: Transform? {
-        videoSize.map { Transform(videoSize: $0, rotation: rotation) }
+        videoSize.map { Transform(videoSize: $0, rotation: drawnRotation) }
     }
 
     /// Where the turned video goes in `bounds` (top-left origin): scaled the same way both ways to fit
@@ -100,16 +123,29 @@ public struct MirrorDisplay: Equatable, Sendable {
         )
     }
 
-    /// `point` (top-left origin, in `bounds`) normalized to the video as drawn: 0–1 inside it.
+    /// `point` (top-left origin, in `bounds`) normalized to the phone's screen: 0–1 inside it, the
+    /// user's quarter turns taken back off (`deviceNormalized`).
     public func normalized(_ point: CGPoint, in bounds: CGSize) -> CGPoint? {
         guard let rect = screenRect(in: bounds), rect.width > 0, rect.height > 0 else { return nil }
-        return CGPoint(x: (point.x - rect.minX) / rect.width, y: (point.y - rect.minY) / rect.height)
+        let drawn = CGPoint(x: (point.x - rect.minX) / rect.width, y: (point.y - rect.minY) / rect.height)
+        return deviceNormalized(drawn)
+    }
+
+    /// `point` normalized to the video as drawn (top-left origin), normalized to the phone's screen in
+    /// its current orientation: the drawn picture turned back by the user's quarter turns.
+    public func deviceNormalized(_ point: CGPoint) -> CGPoint {
+        switch quarterTurns {
+        case 1: return CGPoint(x: point.y, y: 1 - point.x)
+        case 2: return CGPoint(x: 1 - point.x, y: 1 - point.y)
+        case 3: return CGPoint(x: 1 - point.y, y: point.x)
+        default: return point
+        }
     }
 
     /// The angle to turn the video layer by, in radians, in a layer whose y axis points up (where a
     /// positive angle turns counter-clockwise).
     public var layerRotation: CGFloat {
-        CGFloat(-rotation) * .pi / 180
+        CGFloat(-drawnRotation) * .pi / 180
     }
 }
 

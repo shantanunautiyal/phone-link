@@ -216,7 +216,7 @@ final class MirrorWindowController: NSWindowController, NSWindowDelegate {
     /// phone's usual one. Then away from another mirroring window at its place.
     private func place(_ window: NSWindow) {
         let session = model.session(sessionId)
-        let display = session.map(MirrorDisplay.init) ?? MirrorDisplay()
+        let display = session.map(model.display) ?? MirrorDisplay()
         titleChrome = window.frame.height - window.contentLayoutRect.height
         layout = session?.screenLayout
         lastLayout = session?.lastScreenLayout
@@ -283,7 +283,7 @@ final class MirrorWindowController: NSWindowController, NSWindowDelegate {
 
     /// Reshapes the window for the session's video, when its size is known.
     private func reshapeForVideo() {
-        guard let window, let session = model.session(sessionId), let video = MirrorDisplay(session).rotatedVideoSize else { return }
+        guard let window, let session = model.session(sessionId), let video = model.display(session).rotatedVideoSize else { return }
         reshape(window, toVideo: video)
     }
 
@@ -384,7 +384,7 @@ final class MirrorWindowController: NSWindowController, NSWindowDelegate {
         var before = navigationBarApplied ? bar : 0
         let after = navigationBar ? bar : 0
         if after > before {
-            guard let screen = model.session(sessionId).flatMap({ MirrorDisplay($0).shownSize }) else {
+            guard let screen = model.session(sessionId).map(model.display).flatMap(\.shownSize) else {
                 navigationBarPending = true
                 return
             }
@@ -439,17 +439,20 @@ final class MirrorWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: - Following the session
 
-    /// Applies the session's title, navigation bar, volume and video shape now and on every change.
+    /// Applies the session's title, navigation bar, volume, screen rotation and video shape now and on
+    /// every change.
     private func follow() {
         let followed = withObservationTracking {
-            model.session(sessionId).map { (session: $0, title: model.title(for: $0)) }
+            let turns = model.turns(for: sessionId)
+            return model.session(sessionId).map { (session: $0, title: model.title(for: $0), turns: turns) }
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { self?.follow() }
             }
         }
 
-        guard let window, let (session, title) = followed else { return }
+        guard let window, let followed else { return }
+        let (session, title) = (followed.session, followed.title)
         window.title = title
         if let shown = session.screenLayout {
             layout = shown

@@ -7,8 +7,9 @@ import SwiftUI
 /// window's state calls for, a moment's notice when the app does not let its audio be captured, the
 /// navigation bar under the video while the phone navigates by gestures (hidden while the user resizes
 /// the window), and the toolbar — Back while the video shows, the app's volume once it plays sound (or
-/// *Enable audio* while its audio is off on the phone), its other layout, and the phone's keyboard
-/// settings. The window around it (`MirrorWindowController`) sets its size and gives it its state.
+/// *Enable audio* while its audio is off on the phone), the screen's rotation, its other layout, and the
+/// phone's keyboard settings. The window around it (`MirrorWindowController`) sets its size and gives it
+/// its state.
 struct MirrorWindowView: View {
     let sessionId: String
     let video: MirrorVideoLayer
@@ -17,13 +18,14 @@ struct MirrorWindowView: View {
 
     var body: some View {
         let session = model.session(sessionId)
+        let display = session.map(model.display) ?? MirrorDisplay()
         VStack(spacing: 0) {
             ZStack {
                 MirrorVideoRepresentable(
                     sessionId: sessionId,
                     video: video,
                     model: model,
-                    display: session.map(MirrorDisplay.init) ?? MirrorDisplay(),
+                    display: display,
                     inputEnabled: session.map(model.takesInput) ?? false
                 )
                 if let session, let overlay = model.overlay(for: session) {
@@ -413,6 +415,7 @@ private struct MirrorToolbar: ToolbarContent {
             case .none:
                 EmptyView()
             }
+            MirrorRotationMenu(session: session)
             if model.offersLayouts(session) {
                 let compact = session.screenLayout == 1
                 Button {
@@ -433,6 +436,34 @@ private struct MirrorToolbar: ToolbarContent {
                 }
                 .help("Choose the keyboard language on your phone")
             }
+        }
+    }
+}
+
+/// The window's screen rotation: the phone's own, or a quarter turn more so that a portrait screen fills
+/// a landscape window (and the other way round).
+private struct MirrorRotationMenu: View {
+    let session: MirrorSessionView
+    @Environment(ScreenMirroringModel.self) private var model
+
+    var body: some View {
+        let turned = model.turns(for: session.id)
+        Menu {
+            choice(0, "As on the Phone", symbol: "iphone", turned: turned)
+            choice(3, "Turned Left", symbol: "rotate.left", turned: turned)
+            choice(1, "Turned Right", symbol: "rotate.right", turned: turned)
+            choice(2, "Upside Down", symbol: "arrow.uturn.down", turned: turned)
+        } label: {
+            Label("Rotate", systemImage: "rotate.right")
+        }
+        .help("Turn the screen to fit the window")
+    }
+
+    private func choice(_ turns: Int, _ title: LocalizedStringKey, symbol: String, turned: Int) -> some View {
+        Button {
+            model.setTurns(turns, for: session.id)
+        } label: {
+            Label(title, systemImage: turned == turns ? "checkmark" : symbol)
         }
     }
 }
