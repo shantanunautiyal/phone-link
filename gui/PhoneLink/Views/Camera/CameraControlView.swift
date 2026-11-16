@@ -66,7 +66,7 @@ struct CameraControlView: View {
                     HStack(spacing: 3) {
                         Text("\(status.batteryLevel)%")
                             .monospacedDigit()
-                        Image(systemName: status.isCharging ? "battery.100.bolt" : "battery.50")
+                        Image(systemName: status.isCharging ? "battery.100percent.bolt" : "battery.50percent")
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

@@ -175,6 +175,56 @@ public final class NotificationsModel {
         return ""
     }
 
+    /// The authentication code a notification names, for the card's Copy Code button.
+    ///
+    /// The text has to call the number a code (as a sign-in message does) and the code has 4 to 10
+    /// digits, optionally written `123 456`; a number that merely looks like one (a ZIP, an order
+    /// or error number) is not taken.
+    public static func authenticationCode(in notification: PhoneNotification) -> String? {
+        let parts: [String?] = [notification.title, notification.subtitle, preview(of: notification)]
+        let text = parts
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        return authenticationCode(in: text)
+    }
+
+    static func authenticationCode(in text: String) -> String? {
+        let whole = NSRange(text.startIndex..<text.endIndex, in: text)
+        for expression in codeExpressions {
+            guard let match = expression.firstMatch(in: text, options: [], range: whole),
+                  let codeRange = Range(match.range(at: 1), in: text),
+                  let matchRange = Range(match.range(at: 0), in: text) else { continue }
+
+            // The words around the match say whether this is a code at all.
+            let contextStart = text.index(matchRange.lowerBound, offsetBy: -24, limitedBy: text.startIndex) ?? text.startIndex
+            let contextEnd = text.index(matchRange.upperBound, offsetBy: 24, limitedBy: text.endIndex) ?? text.endIndex
+            let context = text[contextStart..<contextEnd].lowercased()
+            if falsePositivePrefixes.contains(where: { context.contains($0) }) { continue }
+
+            let code = String(text[codeRange])
+            // "123 456" is one code; copy it without the gap.
+            return code.allSatisfy { $0.isNumber || $0.isWhitespace } ? code.filter(\.isNumber) : code
+        }
+        return nil
+    }
+
+    /// A keyword, then a code on the same line (or a code, then a keyword); the first pattern is
+    /// tried on the whole text before the second.
+    private static let codeExpressions: [NSRegularExpression] = {
+        let patterns = [
+            #"(?i)(?:code|otp|passcode|verification|authentication|confirmation)[^\n]{0,80}?\b(\d{4,10}|\d{3}[ -]\d{3})\b"#,
+            #"(?i)\b(\d{4,10})\b[^\n]{0,40}(?:code|otp|passcode|verification|authentication|confirmation)"#,
+        ]
+        return patterns.compactMap { try? NSRegularExpression(pattern: $0) }
+    }()
+
+    /// Terms that name something other than a sign-in code.
+    private static let falsePositivePrefixes = [
+        "zip", "postal", "area code", "error code", "qr code", "bar code", "barcode",
+        "country code", "colour code", "color code", "wi-fi", "wifi",
+    ]
+
     /// The list as its sections: Pinned when any notification is pinned, then one section per day,
     /// newest day first. A section header names the day, so a row needs only the time of day.
     public func sections(now: Date = .now, calendar: Calendar = .current) -> [NotificationSection] {

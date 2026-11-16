@@ -52,6 +52,8 @@ public struct PhoneStatusSummary: Equatable, Sendable {
     public let wifi: Glyph?
     public let cellular: Glyph?
     public let batteryPercent: Int32?
+    /// The phone is charging: the battery glyph shows its bolt.
+    public let batteryCharging: Bool
     public let battery: Glyph?
 }
 
@@ -66,8 +68,18 @@ extension DeviceStatusModel {
         }
 
         var percent: Int32?
-        if case let .level(level, _, _) = status?.battery { percent = level }
-        return PhoneStatusSummary(wifi: glyph(.wifi), cellular: glyph(.cellular), batteryPercent: percent, battery: glyph(.battery))
+        var charging = false
+        if case let .level(level, isCharging, _) = status?.battery {
+            percent = level
+            charging = isCharging
+        }
+        return PhoneStatusSummary(
+            wifi: glyph(.wifi),
+            cellular: glyph(.cellular),
+            batteryPercent: percent,
+            batteryCharging: charging,
+            battery: glyph(.battery)
+        )
     }
 
     /// The Do Not Disturb tile; `nil` when the phone has no Do Not Disturb control.

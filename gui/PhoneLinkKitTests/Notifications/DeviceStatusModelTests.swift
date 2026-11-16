@@ -330,6 +330,7 @@ import PhoneLinkEngine
             wifi: .init(symbol: "wifi", variableValue: 1, label: "Wi-Fi"),
             cellular: .init(symbol: "cellularbars", variableValue: 0.75, label: "SKT"),
             batteryPercent: 78,
+            batteryCharging: true,
             battery: .init(symbol: "battery.100percent.bolt", variableValue: nil, label: "78% · Charging")
         ))
 

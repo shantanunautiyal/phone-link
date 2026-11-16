@@ -347,6 +347,12 @@ private struct SidebarPhonePane: View {
                             controller.refresh()
                         }
                     } label: {
+                        let connectFill: Color = controller.connected
+                            ? (colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.80))
+                            : (colorScheme == .dark ? Color.accentColor.opacity(0.20) : Color.accentColor.opacity(0.12))
+                        let connectStroke: Color = controller.connected
+                            ? (colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.08))
+                            : Color.accentColor.opacity(0.35)
                         HStack(spacing: 5) {
                             Image(systemName: controller.connected ? "xmark" : "arrow.clockwise")
                                 .font(.system(size: 9.5, weight: .bold))
@@ -361,18 +367,9 @@ private struct SidebarPhonePane: View {
                                 Capsule(style: .continuous)
                                     .fill(.ultraThinMaterial)
                                 Capsule(style: .continuous)
-                                    .fill(
-                                        controller.connected
-                                            ? (colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.80))
-                                            : (colorScheme == .dark ? Color.accentColor.opacity(0.20) : Color.accentColor.opacity(0.12))
-                                    )
+                                    .fill(connectFill)
                                 Capsule(style: .continuous)
-                                    .strokeBorder(
-                                        controller.connected
-                                            ? (colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.08))
-                                            : Color.accentColor.opacity(0.35),
-                                        lineWidth: 0.8
-                                    )
+                                    .strokeBorder(connectStroke, lineWidth: 0.8)
                             }
                         }
                         .clipShape(Capsule(style: .continuous))
@@ -393,7 +390,8 @@ private struct SidebarPhonePane: View {
     }
 
     private var batterySymbol: String {
-        guard let percent = deviceStatus.summary?.batteryPercent else { return "battery.100" }
+        guard let summary = deviceStatus.summary, let percent = summary.batteryPercent else { return "battery.100" }
+        if summary.batteryCharging { return "battery.100percent.bolt" }
         switch percent {
         case 0...10: return "battery.0"
         case 11...30: return "battery.25"
@@ -877,6 +875,7 @@ private struct MainContentPane: View {
     @Environment(NotificationsModel.self) private var notifications
     @Environment(MessagesModel.self) private var messages
     @Environment(PhoneAppsModel.self) private var phoneApps
+    @Environment(FileTransferModel.self) private var fileTransfer
 
     /// The tabs displayed in the center header capsule (including Notifications, Messages, Photos, Apps, Calls, Contacts)
     private let primarySections: [AppSection] = [
@@ -1012,24 +1011,25 @@ private struct MainContentPane: View {
                 if section == .notifications {
                     Button {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            notifications.clearAll()
+                            _ = notifications.clearAll()
                         }
                     } label: {
+                        let windColor: Color = notifications.canClearAll
+                            ? (colorScheme == .dark ? Color.white.opacity(0.90) : Color.primary.opacity(0.90))
+                            : (colorScheme == .dark ? Color.white.opacity(0.35) : Color.primary.opacity(0.30))
+                        let windFill: Color = colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
+                        let windStroke: Color = colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08)
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "wind")
                                 .font(.system(size: 14))
-                                .foregroundStyle(
-                                    notifications.canClearAll
-                                        ? (colorScheme == .dark ? Color.white.opacity(0.90) : Color.primary.opacity(0.90))
-                                        : (colorScheme == .dark ? Color.white.opacity(0.35) : Color.primary.opacity(0.30))
-                                )
+                                .foregroundStyle(windColor)
                                 .frame(width: 28, height: 28)
                                 .background {
                                     Circle()
-                                        .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06))
+                                        .fill(windFill)
                                         .overlay {
                                             Circle()
-                                                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.8)
+                                                .strokeBorder(windStroke, lineWidth: 0.8)
                                         }
                                 }
 
@@ -1060,7 +1060,7 @@ private struct MainContentPane: View {
             .padding(.horizontal, 20)
 
             // Content Area displaying the selected section
-            ZStack {
+            ZStack(alignment: .bottom) {
                 switch section {
                 case .notifications:
                     NotificationCardsListView()
@@ -1086,6 +1086,12 @@ private struct MainContentPane: View {
                     }
                 case .photos:
                     PhotoGridColumn()
+                }
+
+                // A file arriving from the phone shows on whichever page is open.
+                if let status = fileTransfer.receiveStatus {
+                    ReceivingBanner(model: fileTransfer, status: status)
+                        .padding(.bottom, 18)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1127,10 +1133,79 @@ private struct MainContentPane: View {
     }
 }
 
+// MARK: - Receiving Banner
+
+/// The file arriving from the phone, floating over whichever page is open. The sidebar has its own
+/// card; this one keeps the progress visible when the sidebar is hidden.
+private struct ReceivingBanner: View {
+    let model: FileTransferModel
+    let status: String
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.tint)
+                Text(name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 6)
+                if let fraction = model.receiveFraction {
+                    Text(fraction, format: .percent.precision(.fractionLength(0)))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let fraction = model.receiveFraction {
+                ProgressView(value: fraction)
+                    .progressViewStyle(.linear)
+            } else {
+                ProgressView()
+                    .progressViewStyle(.linear)
+            }
+            Text(status)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(width: 320)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.65))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08),
+                        lineWidth: 0.8
+                    )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
+    }
+
+    private var name: String {
+        let names = model.transfers.receive?.fileNames ?? []
+        switch names.count {
+        case 0: return String(localized: "Receiving from your phone")
+        case 1: return names[0]
+        default: return String(localized: "\(names.count) files")
+        }
+    }
+}
+
 // MARK: - Device Switcher Menu
 
-private struct DeviceSwitcherMenu: View {
-    @Environment(EngineController.self) private var controller
+private struct DeviceSwitcherMenu: View {    @Environment(EngineController.self) private var controller
     @Environment(AppNavigator.self) private var navigator
     @Environment(PhoneFilesModel.self) private var phoneFiles
     @Environment(\.colorScheme) private var colorScheme
@@ -1325,6 +1400,8 @@ private struct AppleGlassNotificationCard: View {
     @State private var isHovered = false
     @State private var isReplying = false
     @State private var replyText = ""
+    @State private var dragOffset: CGFloat = 0
+    @State private var copiedCode = false
     @FocusState private var replyFocused: Bool
 
     @Environment(\.colorScheme) private var colorScheme
@@ -1363,7 +1440,7 @@ private struct AppleGlassNotificationCard: View {
                 // Dismiss Button
                 VStack(spacing: 3) {
                     Button {
-                        onDismiss?()
+                        dismissCard()
                     } label: {
                         ZStack {
                             Circle()
@@ -1385,7 +1462,7 @@ private struct AppleGlassNotificationCard: View {
             }
 
             // Inline Reply and Action Buttons Row (Matching AirSync ReplyActionButton!)
-            if notification.reply != nil || !notification.actions.isEmpty {
+            if notification.reply != nil || !notification.actions.isEmpty || authenticationCode != nil {
                 HStack(spacing: 8) {
                     if isReplying {
                         // Expanded Inline Reply Field + Send Button
@@ -1451,6 +1528,9 @@ private struct AppleGlassNotificationCard: View {
                         .buttonStyle(.plain)
                     }
 
+                    // The code the notification names, copied to this Mac's pasteboard.
+                    copyCodeButton
+
                     // Notification's extra action buttons (Mark as read, Mute, etc.)
                     ForEach(notification.actions, id: \.position) { action in
                         Button {
@@ -1492,25 +1572,7 @@ private struct AppleGlassNotificationCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        colorScheme == .dark
-                            ? Color(red: 0.14, green: 0.13, blue: 0.12).opacity(isHovered ? 0.85 : 0.70)
-                            : Color.white.opacity(isHovered ? 0.80 : 0.65)
-                    )
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(
-                        colorScheme == .dark
-                            ? (isHovered ? Color.white.opacity(0.22) : Color.white.opacity(0.10))
-                            : (isHovered ? Color.black.opacity(0.12) : Color.black.opacity(0.06)),
-                        lineWidth: 0.8
-                    )
-            }
-        }
+        .background { cardBackground }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(
             color: Color.black.opacity(colorScheme == .dark ? 0.20 : 0.06),
@@ -1518,7 +1580,128 @@ private struct AppleGlassNotificationCard: View {
             x: 0,
             y: 2
         )
+        .offset(x: dragOffset)
+        .opacity(1 - min(abs(dragOffset) / 900, 0.45))
+        .gesture(dismissDrag, including: isReplying ? .subviews : .all)
         .onHover { isHovered = $0 }
+    }
+
+    /// The frosted card: material, the scheme's tint, a glass sheen and the hairline border.
+    private var cardBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardFill)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(LinearGradient(colors: cardSheen, startPoint: .topLeading, endPoint: .bottomTrailing))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(cardStroke, lineWidth: 0.8)
+        }
+    }
+
+    private var cardSheen: [Color] {
+        [Color.white.opacity(colorScheme == .dark ? 0.10 : 0.55), Color.white.opacity(0.0)]
+    }
+
+    /// The Copy Code button, when the notification's text names a code.
+    @ViewBuilder
+    private var copyCodeButton: some View {
+        if let code = authenticationCode, !isReplying {
+            Button {
+                copyCode(code)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: copiedCode ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 9.5, weight: .semibold))
+                    Text(copiedCode ? "Copied!" : "Copy Code")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(Color.accentColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background { copyCodeBackground }
+            }
+            .buttonStyle(.plain)
+            .help("Copy the code to this Mac")
+        }
+    }
+
+    private var copyCodeBackground: some View {
+        Capsule(style: .continuous)
+            .fill(Color.accentColor.opacity(colorScheme == .dark ? 0.18 : 0.10))
+            .overlay {
+                Capsule(style: .continuous)
+                    .strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 0.8)
+            }
+    }
+
+    /// The code the card offers to copy, when its text names one.
+    private var authenticationCode: String? {
+        NotificationsModel.authenticationCode(in: notification)
+    }
+
+    /// Drag a card sideways past the threshold to dismiss it, as a phone notification is swiped away.
+    private var dismissDrag: some Gesture {
+        DragGesture(minimumDistance: 16)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                dragOffset = value.translation.width
+            }
+            .onEnded { value in
+                let predicted = value.predictedEndTranslation.width
+                guard abs(predicted) > 160 || abs(value.translation.width) > 90 else {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                        dragOffset = 0
+                    }
+                    return
+                }
+                dismissCard(toward: predicted < 0 ? -1 : 1)
+            }
+    }
+
+    private func dismissCard(toward direction: CGFloat = -1) {
+        withAnimation(.easeIn(duration: 0.18)) {
+            dragOffset = direction * 460
+        }
+        onDismiss?()
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            if dragOffset != 0 {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                    dragOffset = 0
+                }
+            }
+        }
+    }
+
+    private func copyCode(_ code: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(code, forType: .string)
+        withAnimation(.easeOut(duration: 0.15)) {
+            copiedCode = true
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(1400))
+            withAnimation(.easeOut(duration: 0.15)) {
+                copiedCode = false
+            }
+        }
+    }
+
+    private var cardFill: Color {
+        if colorScheme == .dark {
+            return Color(red: 0.14, green: 0.13, blue: 0.12).opacity(isHovered ? 0.55 : 0.42)
+        }
+        return Color.white.opacity(isHovered ? 0.78 : 0.62)
+    }
+
+    private var cardStroke: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(isHovered ? 0.22 : 0.10)
+        }
+        return Color.black.opacity(isHovered ? 0.12 : 0.06)
     }
 
     private func sendReply() {

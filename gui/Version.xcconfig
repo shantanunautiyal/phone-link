@@ -8,4 +8,4 @@
 // this Mac. macOS replaces an installed camera extension only with one of a different version, and the
 // updater installs a download only when its build number is higher than the running app's.
 MARKETING_VERSION = 0.4.2
-CURRENT_PROJECT_VERSION = 6
+CURRENT_PROJECT_VERSION = 7

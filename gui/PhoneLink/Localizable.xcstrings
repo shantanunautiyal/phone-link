@@ -2500,6 +2500,36 @@
         }
       }
     },
+    "Copy Code": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 복사"
+          }
+        }
+      }
+    },
+    "Copy the code to this Mac": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드를 이 Mac에 복사"
+          }
+        }
+      }
+    },
+    "Copied!": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사됨!"
+          }
+        }
+      }
+    },
     "Couldn't Add to Favorites": {
       "localizations": {
         "ko": {

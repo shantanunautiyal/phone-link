@@ -477,6 +477,16 @@ import PhoneLinkEngine
         #expect(NotificationsModel.appName(of: notification("nameless", appName: "")) == "com.example.nameless")
     }
 
+    @Test func aSignInCodeIsFoundForCopyingButOtherNumbersAreNot() {
+        #expect(NotificationsModel.authenticationCode(in: "Your verification code is 482913") == "482913")
+        #expect(NotificationsModel.authenticationCode(in: "482913 is your authentication code") == "482913")
+        #expect(NotificationsModel.authenticationCode(in: "Login code: 123 456") == "123456")
+        #expect(NotificationsModel.authenticationCode(in: "Your ZIP code is 94103") == nil)
+        #expect(NotificationsModel.authenticationCode(in: "Order 482913 has shipped") == nil)
+        #expect(NotificationsModel.authenticationCode(in: "Your order was charged $48.29.") == nil)
+        #expect(NotificationsModel.authenticationCode(in: "Your code is 12") == nil)
+    }
+
     @Test func listTimesReadLikeMails() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US")
