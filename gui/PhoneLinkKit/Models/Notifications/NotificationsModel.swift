@@ -209,12 +209,12 @@ public final class NotificationsModel {
         return nil
     }
 
-    /// A keyword, then a code on the same line (or a code, then a keyword); the first pattern is
-    /// tried on the whole text before the second.
+    /// A keyword, then a code within the next line or two (or a code, then a keyword); the first
+    /// pattern is tried on the whole text before the second.
     private static let codeExpressions: [NSRegularExpression] = {
         let patterns = [
-            #"(?i)(?:code|otp|passcode|verification|authentication|confirmation)[^\n]{0,80}?\b(\d{4,10}|\d{3}[ -]\d{3})\b"#,
-            #"(?i)\b(\d{4,10})\b[^\n]{0,40}(?:code|otp|passcode|verification|authentication|confirmation)"#,
+            #"(?i)(?:code|otp|passcode|verification|authentication|confirmation)[\s\S]{0,80}?\b(\d{4,10}|\d{3}[ -]\d{3})\b"#,
+            #"(?i)\b(\d{4,10})\b[\s\S]{0,40}(?:code|otp|passcode|verification|authentication|confirmation)"#,
         ]
         return patterns.compactMap { try? NSRegularExpression(pattern: $0) }
     }()

@@ -481,6 +481,8 @@ import PhoneLinkEngine
         #expect(NotificationsModel.authenticationCode(in: "Your verification code is 482913") == "482913")
         #expect(NotificationsModel.authenticationCode(in: "482913 is your authentication code") == "482913")
         #expect(NotificationsModel.authenticationCode(in: "Login code: 123 456") == "123456")
+        // The title names the code and the body holds it.
+        #expect(NotificationsModel.authenticationCode(in: "Your verification code\n482913") == "482913")
         #expect(NotificationsModel.authenticationCode(in: "Your ZIP code is 94103") == nil)
         #expect(NotificationsModel.authenticationCode(in: "Order 482913 has shipped") == nil)
         #expect(NotificationsModel.authenticationCode(in: "Your order was charged $48.29.") == nil)
