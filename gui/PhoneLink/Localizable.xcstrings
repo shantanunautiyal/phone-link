@@ -11087,6 +11087,16 @@
           }
         }
       }
+    },
+    "GitHub didn't answer in time. Check your connection and try again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub가 제때 응답하지 않았어요. 연결을 확인하고 다시 시도하세요."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

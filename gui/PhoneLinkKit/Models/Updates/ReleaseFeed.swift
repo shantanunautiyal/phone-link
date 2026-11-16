@@ -61,6 +61,9 @@ public struct GitHubReleaseFeed: ReleaseFeed {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         request.cachePolicy = .reloadIgnoringLocalCacheData
+        // A check that stalls must not hang the update window: fail after a short wait so the UI can
+        // say so instead of spinning.
+        request.timeoutInterval = 15
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {

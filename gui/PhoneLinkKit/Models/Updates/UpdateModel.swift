@@ -251,6 +251,8 @@ public final class UpdateModel {
             }
         case let error as URLError where error.code == .notConnectedToInternet:
             return String(localized: "This Mac isn't connected to the internet.")
+        case let error as URLError where error.code == .timedOut:
+            return String(localized: "GitHub didn't answer in time. Check your connection and try again.")
         default:
             return error.localizedDescription
         }

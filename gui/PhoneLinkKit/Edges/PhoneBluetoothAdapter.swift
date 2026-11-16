@@ -297,12 +297,13 @@ private enum CoreBluetoothPairingReply {
 /// success and does nothing, so its callback never comes. The records are the ones bluetoothd last
 /// read from the phone — when it paired, or when `ServiceRefresher` made it read them again — which
 /// `getServiceRecord(for:)` reads directly.
-private final class RfcommOpener: NSObject, @unchecked Sendable {
+private final class RfcommOpener: NSObject, IOBluetoothRFCOMMChannelDelegate, @unchecked Sendable {
     let address: String
     let uuid: UUID
     let done = DispatchSemaphore(value: 0)
     private(set) var result: Result<RfcommChannelBox, RfcommError> = .failure(.TimedOut)
     private var finished = false
+    private var box: RfcommChannelBox?
 
     init(address: String, uuid: UUID) {
         self.address = address
@@ -330,19 +331,18 @@ private final class RfcommOpener: NSObject, @unchecked Sendable {
             return
         }
 
-        let box = RfcommChannelBox()
+        box = RfcommChannelBox()
         var channel: IOBluetoothRFCOMMChannel?
-        let status = device.openRFCOMMChannelSync(&channel, withChannelID: channelID, delegate: box)
-        guard status == kIOReturnSuccess, let channel else {
+        let status = device.openRFCOMMChannelAsync(&channel, withChannelID: channelID, delegate: box!)
+        guard status == kIOReturnSuccess else {
             finish(.failure(.ConnectFailed(reason: String(format: "the channel did not open (0x%08x)", status))))
             return
         }
-
-        box.channel = channel
-        finish(.success(box))
+        // Completion arrives via rfcommChannelOpenComplete(_:status:error:) on the main run loop.
     }
 
     func cancel() {
+        if let box { box.close() }
         finish(.failure(.TimedOut))
     }
 
@@ -356,6 +356,18 @@ private final class RfcommOpener: NSObject, @unchecked Sendable {
         done.signal()
     }
 
+    // MARK: IOBluetoothRFCOMMChannelDelegate
+
+    /// Called on the main run loop when the async open completes.
+    func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, status: IOReturn, error: (any Error)!) {
+        guard !finished else { return }
+        guard status == kIOReturnSuccess, let rfcommChannel, let box else {
+            finish(.failure(.ConnectFailed(reason: String(format: "the channel did not open (0x%08x)", status))))
+            return
+        }
+        box.channel = rfcommChannel
+        finish(.success(box))
+    }
 }
 
 /// Makes bluetoothd read the device's service records again and watches for the service's record.
