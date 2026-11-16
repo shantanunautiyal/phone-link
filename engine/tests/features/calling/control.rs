@@ -44,7 +44,7 @@ async fn switching_call_control_on_connects_to_the_audio_gateway() {
     assert_eq!(world.ag.opened(), [AG_SERVICE_UUID]);
     assert_eq!(
         world.ag.commands(),
-        ["AT+BRSF=102", "AT+CIND=?", "AT+CIND?", "AT+CMER=3,0,0,1", "AT+CHLD=?", "AT+CLIP=1", "AT+CCWA=1", "AT+CLCC"]
+        ["AT+BRSF=102", "AT+CMEE=1", "AT+CIND=?", "AT+CIND?", "AT+CMER=3,0,0,1", "AT+CHLD=?", "AT+CLIP=1", "AT+CCWA=1", "AT+CLCC"]
     );
     let state = world.calling.control().state(&phone()).unwrap();
     assert!(state.offered && state.pc_consent && state.enabled);
@@ -83,6 +83,28 @@ async fn a_missing_service_record_is_read_again_once() {
     let world = world();
     world.grant();
     world.ag.fail_opens(vec![RfcommError::ServiceNotFound]);
+    world.calling.control().set_enabled(&phone(), true).unwrap();
+
+    assert!(eventually(|| status(&world) == ControlStatus::Ready).await);
+    assert_eq!(world.ag.opened().len(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_timed_out_open_refreshes_the_records_and_tries_again_once() {
+    let world = world();
+    world.grant();
+    world.ag.fail_opens(vec![RfcommError::TimedOut]);
+    world.calling.control().set_enabled(&phone(), true).unwrap();
+
+    assert!(eventually(|| status(&world) == ControlStatus::Ready).await);
+    assert_eq!(world.ag.opened().len(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_connect_failure_refreshes_the_records_and_tries_again_once() {
+    let world = world();
+    world.grant();
+    world.ag.fail_opens(vec![RfcommError::ConnectFailed { reason: "the channel did not open".into() }]);
     world.calling.control().set_enabled(&phone(), true).unwrap();
 
     assert!(eventually(|| status(&world) == ControlStatus::Ready).await);

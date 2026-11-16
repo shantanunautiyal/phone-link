@@ -36,7 +36,7 @@ async fn the_service_level_connection_runs_in_order_and_names_the_indicators() {
     assert_eq!(indicators, ["call", "callsetup", "service", "signal", "roam", "battchg", "callheld"]);
     assert_eq!(
         ag.commands(),
-        ["AT+BRSF=102", "AT+CIND=?", "AT+CIND?", "AT+CMER=3,0,0,1", "AT+CHLD=?", "AT+CLIP=1", "AT+CCWA=1"]
+        ["AT+BRSF=102", "AT+CMEE=1", "AT+CIND=?", "AT+CIND?", "AT+CMER=3,0,0,1", "AT+CHLD=?", "AT+CLIP=1", "AT+CCWA=1"]
     );
     assert_eq!(ag.opened(), [AG_SERVICE_UUID]);
 }

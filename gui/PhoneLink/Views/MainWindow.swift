@@ -45,19 +45,51 @@ struct MainWindow: View {
             VisualEffectView(material: .underWindowBackground, blendingMode: .behindWindow, state: .active)
                 .ignoresSafeArea()
 
-            // Subtle dynamic glass tint (matches AirSync windowOpacity)
-            LinearGradient(
-                colors: colorScheme == .dark ? [
-                    Color.black.opacity(0.30),
-                    Color.black.opacity(0.18)
-                ] : [
-                    Color.white.opacity(0.14),
-                    Color.white.opacity(0.06)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            if #available(macOS 26, *) {
+                // A rich backdrop for Liquid Glass to refract: accent glows over the window's
+                // translucency, dimmed just enough to keep content legible.
+                ZStack {
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.40), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    RadialGradient(
+                        colors: [Color.purple.opacity(0.28), .clear],
+                        center: .bottomTrailing,
+                        startRadius: 0,
+                        endRadius: 620
+                    )
+                    RadialGradient(
+                        colors: [Color.blue.opacity(0.22), .clear],
+                        center: .topTrailing,
+                        startRadius: 0,
+                        endRadius: 520
+                    )
+                    LinearGradient(
+                        colors: colorScheme == .dark
+                            ? [Color.black.opacity(0.45), Color.black.opacity(0.30)]
+                            : [Color.white.opacity(0.22), Color.white.opacity(0.10)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .ignoresSafeArea()
+            } else {
+                // Subtle dynamic glass tint (matches AirSync windowOpacity)
+                LinearGradient(
+                    colors: colorScheme == .dark ? [
+                        Color.black.opacity(0.30),
+                        Color.black.opacity(0.18)
+                    ] : [
+                        Color.white.opacity(0.14),
+                        Color.white.opacity(0.06)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+            }
 
             // Main layout
             HStack(spacing: 0) {
@@ -262,15 +294,14 @@ private struct SidebarPhonePane: View {
                 .foregroundStyle(Color.primary.opacity(0.9))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)
-                .background {
-                    ZStack {
-                        Capsule(style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        Capsule(style: .continuous)
-                            .fill(colorScheme == .dark ? Color.black.opacity(0.40) : Color.white.opacity(0.70))
-                        Capsule(style: .continuous)
-                            .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.8)
-                    }
+                .glassPanel(
+                    Capsule(style: .continuous),
+                    tintDark: Color.black.opacity(0.40),
+                    tintLight: Color.white.opacity(0.70)
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.8)
                 }
                 .clipShape(Capsule(style: .continuous))
                 .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.04), radius: 5, x: 0, y: 1.5)
@@ -319,15 +350,14 @@ private struct SidebarPhonePane: View {
                         .foregroundStyle(Color.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background {
-                            ZStack {
-                                Capsule(style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                                Capsule(style: .continuous)
-                                    .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.75))
-                                Capsule(style: .continuous)
-                                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.08), lineWidth: 0.8)
-                            }
+                        .glassPanel(
+                            Capsule(style: .continuous),
+                            tintDark: Color.white.opacity(0.10),
+                            tintLight: Color.white.opacity(0.75)
+                        )
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.08), lineWidth: 0.8)
                         }
                         .clipShape(Capsule(style: .continuous))
                         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.04), radius: 4, x: 0, y: 1.5)
@@ -362,15 +392,14 @@ private struct SidebarPhonePane: View {
                         .foregroundStyle(controller.connected ? Color.primary : Color.accentColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background {
-                            ZStack {
-                                Capsule(style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                                Capsule(style: .continuous)
-                                    .fill(connectFill)
-                                Capsule(style: .continuous)
-                                    .strokeBorder(connectStroke, lineWidth: 0.8)
-                            }
+                        .glassPanel(
+                            Capsule(style: .continuous),
+                            tintDark: connectFill,
+                            tintLight: connectFill
+                        )
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .strokeBorder(connectStroke, lineWidth: 0.8)
                         }
                         .clipShape(Capsule(style: .continuous))
                         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.04), radius: 4, x: 0, y: 1.5)
@@ -758,15 +787,14 @@ private struct NowPlayingPhoneWidget: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.black.opacity(0.40))
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.8)
-            }
+        .glassPanel(
+            RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tintDark: Color.black.opacity(0.40),
+            tintLight: Color.black.opacity(0.40)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.8)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -976,6 +1004,7 @@ private struct MainContentPane: View {
                                     .font(.system(size: 12.5, weight: .medium))
                                     .foregroundStyle(iconColor)
                                     .frame(width: 30, height: 30)
+                                    .waterDropBounce(isActive: isSelected)
                                     .background {
                                         if isSelected {
                                             Capsule(style: .continuous)
@@ -1020,20 +1049,19 @@ private struct MainContentPane: View {
                 }
                 .padding(.horizontal, 5)
                 .padding(.vertical, 3)
-                .background {
-                    ZStack {
-                        Capsule(style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        Capsule(style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.70))
-                        Capsule(style: .continuous)
-                            .strokeBorder(
-                                colorScheme == .dark
-                                    ? Color.white.opacity(0.14)
-                                    : Color.black.opacity(0.08),
-                                lineWidth: 0.8
-                            )
-                    }
+                .glassPanel(
+                    Capsule(style: .continuous),
+                    tintDark: Color.white.opacity(0.10),
+                    tintLight: Color.white.opacity(0.70)
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.14)
+                                : Color.black.opacity(0.08),
+                            lineWidth: 0.8
+                        )
                 }
                 .clipShape(Capsule(style: .continuous))
                 .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.20 : 0.04), radius: 4, x: 0, y: 1.5)
@@ -1128,15 +1156,14 @@ private struct MainContentPane: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(colorScheme == .dark ? Color.black.opacity(0.20) : Color.white.opacity(0.35))
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 1)
-                }
+            .glassPanel(
+                RoundedRectangle(cornerRadius: 20, style: .continuous),
+                tintDark: Color.black.opacity(0.20),
+                tintLight: Color.white.opacity(0.35)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .padding(.horizontal, 12)
@@ -1209,18 +1236,17 @@ private struct ReceivingBanner: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(width: 320)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.65))
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(
-                        colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08),
-                        lineWidth: 0.8
-                    )
-            }
+        .glassPanel(
+            RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tintDark: Color.black.opacity(0.35),
+            tintLight: Color.white.opacity(0.65)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(
+                    colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08),
+                    lineWidth: 0.8
+                )
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
@@ -1334,20 +1360,19 @@ private struct DeviceSwitcherMenu: View {    @Environment(EngineController.self)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background {
-                ZStack {
-                    Capsule(style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    Capsule(style: .continuous)
-                        .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.65))
-                    Capsule(style: .continuous)
-                        .strokeBorder(
-                            colorScheme == .dark
-                                ? Color.white.opacity(0.12)
-                                : Color.black.opacity(0.08),
-                            lineWidth: 0.8
-                        )
-                }
+            .glassPanel(
+                Capsule(style: .continuous),
+                tintDark: Color.white.opacity(0.08),
+                tintLight: Color.white.opacity(0.65)
+            )
+            .overlay {
+                Capsule(style: .continuous)
+                    .strokeBorder(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.12)
+                            : Color.black.opacity(0.08),
+                        lineWidth: 0.8
+                    )
             }
             .clipShape(Capsule(style: .continuous))
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.20 : 0.04), radius: 3, x: 0, y: 1)
@@ -1605,8 +1630,15 @@ private struct AppleGlassNotificationCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background { cardBackground }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassPanel(
+            RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tintDark: cardFill,
+            tintLight: cardFill
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(cardStroke, lineWidth: 0.8)
+        }
         .shadow(
             color: Color.black.opacity(colorScheme == .dark ? 0.20 : 0.06),
             radius: isHovered ? 8 : 4,
@@ -1617,24 +1649,6 @@ private struct AppleGlassNotificationCard: View {
         .opacity(1 - min(abs(dragOffset) / 900, 0.45))
         .gesture(dismissDrag, including: isReplying ? .subviews : .all)
         .onHover { isHovered = $0 }
-    }
-
-    /// The frosted card: material, the scheme's tint, a glass sheen and the hairline border.
-    private var cardBackground: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(cardFill)
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(LinearGradient(colors: cardSheen, startPoint: .topLeading, endPoint: .bottomTrailing))
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(cardStroke, lineWidth: 0.8)
-        }
-    }
-
-    private var cardSheen: [Color] {
-        [Color.white.opacity(colorScheme == .dark ? 0.10 : 0.55), Color.white.opacity(0.0)]
     }
 
     /// The Copy Code button, when the notification's text names a code.
@@ -1870,6 +1884,35 @@ struct VisualEffectView: NSViewRepresentable {
         nsView.material = material
         nsView.blendingMode = blendingMode
         nsView.state = state
+    }
+}
+
+/// A dark frosted deck behind the main content, so the body stays dark and readable in both
+/// appearances (macOS 26 only; nothing on older macOS). It is an explicit dark layer — not glass
+/// sampling — because the glass material over the translucent window reads too light.
+private struct LiquidGlassBodyBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        if #available(macOS 26, *) {
+            ZStack {
+                LinearGradient(
+                    colors: colorScheme == .dark
+                        ? [Color.black.opacity(0.62), Color.black.opacity(0.45)]
+                        : [Color.black.opacity(0.55), Color.black.opacity(0.38)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                RadialGradient(
+                    colors: [Color.accentColor.opacity(0.10), .clear],
+                    center: .topTrailing,
+                    startRadius: 0,
+                    endRadius: 520
+                )
+            }
+        } else {
+            Color.clear
+        }
     }
 }
 

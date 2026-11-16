@@ -94,7 +94,7 @@ private struct IncomingCallCard: View {
             }
         }
         .padding(14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .glassCard(material: .regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Incoming call from \(call.shownName)")
     }

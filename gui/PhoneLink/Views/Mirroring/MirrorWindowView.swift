@@ -343,7 +343,7 @@ private struct MirrorCaptureNotice: View {
             .font(.callout)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(.regularMaterial, in: Capsule())
+            .glassCard(material: .regularMaterial, in: Capsule())
             .shadow(radius: 4)
             .allowsHitTesting(false)
     }

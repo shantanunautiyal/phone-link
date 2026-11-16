@@ -40,7 +40,7 @@ struct MenuBarPopoverView: View {
                 .padding(.vertical, 6)
         }
         .frame(width: 400)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .glassCard(material: .ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.08)))
         .shadow(color: .black.opacity(0.25), radius: 24, y: 8)
         .padding(8)

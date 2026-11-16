@@ -226,7 +226,7 @@ private struct Tile: View {
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .frame(width: 18, height: 18)
-                            .background(.regularMaterial, in: Circle())
+                            .glassCard(material: .regularMaterial, in: Circle())
                             .offset(x: 6, y: 6)
                     }
                 }

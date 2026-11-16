@@ -442,8 +442,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.titleVisibility = .hidden
         window.toolbar = nil
         window.isMovableByWindowBackground = true
-        window.backgroundColor = NSColor(calibratedRed: 0.10, green: 0.09, blue: 0.08, alpha: 1)
-        window.isOpaque = true
+        if #available(macOS 26, *) {
+            // Liquid Glass blurs what lies behind the window, so the window must not paint its own
+            // opaque background over it; the SwiftUI backdrop (VisualEffectView underWindowBackground)
+            // supplies the translucency instead.
+            window.backgroundColor = .clear
+            window.isOpaque = false
+        } else {
+            window.backgroundColor = NSColor(calibratedRed: 0.10, green: 0.09, blue: 0.08, alpha: 1)
+            window.isOpaque = true
+        }
         window.hasShadow = true
         window.setContentSize(NSSize(width: 1140, height: 740))
         window.contentMinSize = NSSize(width: 900, height: 620)

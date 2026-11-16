@@ -38,12 +38,7 @@ struct PhoneArea: View {
         }
         .padding(.bottom, 8)
         .padding(.horizontal, SidebarMetrics.edge)
-        .background {
-            // The frosted-glass panel the phone area sits on: translucent, with the wallpaper's
-            // color behind it showing through.
-            RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-        }
+        .glassPanel(RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
         .background {
             RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous)
                 .strokeBorder(.tint, lineWidth: 2)
@@ -243,7 +238,7 @@ private struct ConnectionNotice: View {
         }
         .padding(.horizontal, SidebarMetrics.content - SidebarMetrics.edge)
         .padding(.vertical, 8)
-        .background(SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
+        .glassCard(fill: SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
     }
 }
 
@@ -330,7 +325,7 @@ private struct PhoneControlTileView: View {
                     }
                 }
                 .frame(width: 26, height: 26)
-                .background(tile.isOn ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.primary.opacity(0.08)), in: Circle())
+                .glassCard(fill: tile.isOn ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.primary.opacity(0.08)), in: Circle())
                 VStack(alignment: .leading, spacing: 0) {
                     Text(tile.title)
                         .font(.callout.weight(.semibold))
@@ -346,7 +341,7 @@ private struct PhoneControlTileView: View {
             }
             .padding(.horizontal, SidebarMetrics.content - SidebarMetrics.edge)
             .frame(minHeight: 44)
-            .background(SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
+            .glassCard(fill: SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
         }
         .buttonStyle(.plain)

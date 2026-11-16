@@ -243,6 +243,8 @@ pub mod command {
     pub fn brsf() -> String {
         format!("AT+BRSF={HF_FEATURES}")
     }
+    /// Enables extended (`+CME ERROR: <n>`) results, so a refused command says why.
+    pub const CMEE: &str = "AT+CMEE=1";
     pub const CIND_TEST: &str = "AT+CIND=?";
     pub const CIND_READ: &str = "AT+CIND?";
     pub const CMER: &str = "AT+CMER=3,0,0,1";

@@ -273,11 +273,19 @@ impl CallControl {
         }
 
         let link = self.ready_link()?;
-        let ok = matches!(link.command(&command::dial(&number), None).await, Ok(Response { result: Final::Ok, .. }));
-        if !ok {
-            let failure = self.selected().map(|(_, r)| dial_failure(&r)).unwrap_or(DialFailure::Failed);
-            info!(failure_kind = ?failure, "the phone did not place the call");
-            return Err(ControlError::DialFailed(failure));
+        let outcome = link.command(&command::dial(&number), None).await;
+        match outcome {
+            Ok(Response { result: Final::Ok, .. }) => {}
+            Ok(Response { result: Final::CmeError(code), .. }) => {
+                let reason = cme_reason(code);
+                warn!(code, reason, "the phone rejected the call with a CME error");
+                return Err(ControlError::Refused(reason.to_string()));
+            }
+            other => {
+                let failure = self.selected().map(|(_, r)| dial_failure(&r)).unwrap_or(DialFailure::Failed);
+                warn!(result = ?other, failure_kind = ?failure, "the phone did not place the call");
+                return Err(ControlError::DialFailed(failure));
+            }
         }
 
         self.inner.lock_or_recover().book.expect_dialed();
@@ -445,11 +453,11 @@ impl CallControl {
         ControlStatus::Ready
     }
 
-    /// Opens the channel; when the Mac's records lack the service, has them read again and tries once
-    /// more.
+    /// Opens the channel; when the Mac's records lack the service or the connection times out/fails,
+    /// has them read again and tries once more.
     async fn open(&self, address: &str) -> Result<(Arc<Link>, mpsc::UnboundedReceiver<LinkEvent>), RfcommError> {
         match self.open_once(address).await {
-            Err(RfcommError::ServiceNotFound) => {
+            Err(RfcommError::ServiceNotFound | RfcommError::TimedOut | RfcommError::ConnectFailed { .. }) => {
                 self.bluetooth.refresh_services(address, AG_SERVICE_UUID).await;
                 self.open_once(address).await
             }
@@ -687,6 +695,20 @@ fn dial_failure(record: &PhoneRecord) -> DialFailure {
     }
 }
 
+/// The common `+CME ERROR: <n>` codes, as what the phone means.
+fn cme_reason(code: i32) -> &'static str {
+    match code {
+        0 => "the phone is busy",
+        3 => "operation not allowed (the phone's Calls permission may be off)",
+        4 => "operation not supported by the phone",
+        26 => "the call setup timed out on the phone",
+        30 => "the phone has no network",
+        31 => "the phone's network timed out",
+        100 => "the phone does not support this call type",
+        _ => "the phone rejected the call",
+    }
+}
+
 fn clcc_entries(info: Vec<Line>) -> Vec<ClccEntry> {
     info.into_iter()
         .filter_map(|l| match l {
@@ -713,6 +735,7 @@ async fn service_level_connection(link: &Link) -> Result<Vec<String>, SlcError> 
         [Line::Brsf(features), ..] => *features,
         _ => return Err(SlcError::Missing("AT+BRSF")),
     };
+    ok(link, command::CMEE, None, "AT+CMEE").await?;
     let indicators = match ok(link, command::CIND_TEST, Some("+CIND"), "AT+CIND=?").await?.as_slice() {
         [Line::CindNames(names), ..] => names.clone(),
         _ => return Err(SlcError::Missing("AT+CIND=?")),

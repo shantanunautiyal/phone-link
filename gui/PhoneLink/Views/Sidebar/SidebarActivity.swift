@@ -69,7 +69,7 @@ private struct TransferCard: View {
         }
         .padding(.horizontal, SidebarMetrics.content - SidebarMetrics.edge)
         .padding(.vertical, 8)
-        .background(SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
+        .glassCard(fill: SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -193,7 +193,7 @@ private struct NowPlayingModule: View {
             }
             .padding(.horizontal, SidebarMetrics.content - SidebarMetrics.edge)
             .padding(.vertical, 10)
-            .background(SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
+            .glassCard(fill: SidebarModuleFill(), in: RoundedRectangle(cornerRadius: SidebarMetrics.moduleRadius, style: .continuous))
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Now playing on your phone")
         }

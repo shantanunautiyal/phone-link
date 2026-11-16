@@ -3,6 +3,8 @@ import Foundation
 import IOBluetooth
 import PhoneLinkEngine
 
+private let bluetoothLog = AppLog(category: "bluetooth")
+
 /// Bluetooth Classic with the phone, for every feature that reaches it over Bluetooth (instant
 /// hotspot's side channel today): the radio, the phone among the paired devices, discovery and
 /// pairing — which the engine runs when the user starts such a feature and no paired device is the
@@ -290,20 +292,28 @@ private enum CoreBluetoothPairingReply {
 
 // MARK: - RFCOMM
 
-/// Opens one RFCOMM channel: the service's record among the phone's SDP records, then the channel.
-/// Main thread only, except `done` and `result`.
+/// Opens one RFCOMM channel: a baseband connection to the phone, the service's record among the
+/// phone's SDP records, then the channel. Main thread only, except `done` and `result`.
 ///
 /// On current macOS IOBluetooth sends no SDP query to the device: `performSDPQuery(_:uuids:)` returns
 /// success and does nothing, so its callback never comes. The records are the ones bluetoothd last
 /// read from the phone — when it paired, or when `ServiceRefresher` made it read them again — which
-/// `getServiceRecord(for:)` reads directly.
-private final class RfcommOpener: NSObject, IOBluetoothRFCOMMChannelDelegate, @unchecked Sendable {
+/// `getServiceRecord(for:)` reads directly. A phone can be paired yet not connected on the radio, and
+/// the channel will not open then; so the opener opens a baseband connection first, as the refresher
+/// does, and waits for it before opening the channel.
+///
+/// The open itself runs on a background queue with `openRFCOMMChannelSync`. The async variant never
+/// delivers its completion delegate on current macOS, so it cannot be waited on; the sync call blocks
+/// only its own queue, never the main thread, and returns the real status.
+private final class RfcommOpener: NSObject, @unchecked Sendable {
     let address: String
     let uuid: UUID
     let done = DispatchSemaphore(value: 0)
     private(set) var result: Result<RfcommChannelBox, RfcommError> = .failure(.TimedOut)
     private var finished = false
     private var box: RfcommChannelBox?
+    private var device: IOBluetoothDevice?
+    private var openedConnection = false
 
     init(address: String, uuid: UUID) {
         self.address = address
@@ -320,30 +330,99 @@ private final class RfcommOpener: NSObject, IOBluetoothRFCOMMChannelDelegate, @u
             finish(.failure(.Unexpected(message: "not a Bluetooth address: \(address)")))
             return
         }
+        self.device = device
+        bluetoothLog.info("rfcomm open: device connected=\(device.isConnected())")
+
+        if device.isConnected() {
+            openChannel()
+            return
+        }
+
+        let status = device.openConnection(self)
+        bluetoothLog.info("rfcomm open: baseband open status=\(status)")
+        guard status == kIOReturnSuccess else {
+            finish(.failure(.ConnectFailed(reason: String(format: "the connection did not open (0x%08x)", status))))
+            return
+        }
+        openedConnection = true
+    }
+
+    func cancel() {
+        bluetoothLog.info("rfcomm open: cancelled by the caller")
+        closeBaseband()
+        if let box { box.close() }
+        finish(.failure(.TimedOut))
+    }
+
+    private func closeBaseband() {
+        if openedConnection {
+            openedConnection = false
+            device?.closeConnection()
+        }
+    }
+
+    /// The target of `openConnection(_:)` (an informal protocol), called on the main run loop.
+    @objc func connectionComplete(_ device: IOBluetoothDevice!, status: IOReturn) {
+        bluetoothLog.info("rfcomm open: baseband complete status=\(status)")
+        guard !finished else { return }
+        guard status == kIOReturnSuccess else {
+            closeBaseband()
+            finish(.failure(.Unreachable))
+            return
+        }
+        // The RFCOMM server needs a moment to be reachable after the ACL connects; opening right
+        // away returns an immediate kIOReturnError.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let self, !self.finished else { return }
+            self.openChannel()
+        }
+    }
+
+    private func openChannel() {
+        guard let device else {
+            finish(.failure(.Unexpected(message: "not a Bluetooth address: \(address)")))
+            return
+        }
         guard let record = device.getServiceRecord(for: sdpUUID) else {
+            closeBaseband()
             finish(.failure(.ServiceNotFound))
             return
         }
 
         var channelID: BluetoothRFCOMMChannelID = 0
         guard record.getRFCOMMChannelID(&channelID) == kIOReturnSuccess else {
+            closeBaseband()
             finish(.failure(.ServiceNotFound))
             return
         }
 
-        box = RfcommChannelBox()
-        var channel: IOBluetoothRFCOMMChannel?
-        let status = device.openRFCOMMChannelAsync(&channel, withChannelID: channelID, delegate: box!)
-        guard status == kIOReturnSuccess else {
-            finish(.failure(.ConnectFailed(reason: String(format: "the channel did not open (0x%08x)", status))))
-            return
+        let box = RfcommChannelBox()
+        self.box = box
+        let queue = DispatchQueue(label: "phonelink.rfcomm.open", qos: .userInitiated)
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.openSynchronously(device: device, channelID: channelID, box: box, attempt: 1)
         }
-        // Completion arrives via rfcommChannelOpenComplete(_:status:error:) on the main run loop.
     }
 
-    func cancel() {
-        if let box { box.close() }
-        finish(.failure(.TimedOut))
+    /// Runs `openRFCOMMChannelSync`. The first generic error may be the radio not having settled yet
+    /// (or leaving a previous attempt half-open), so it is retried once after a short pause.
+    private func openSynchronously(device: IOBluetoothDevice, channelID: BluetoothRFCOMMChannelID, box: RfcommChannelBox, attempt: Int) {
+        var channel: IOBluetoothRFCOMMChannel?
+        let status = device.openRFCOMMChannelSync(&channel, withChannelID: channelID, delegate: box)
+        bluetoothLog.info("rfcomm open: sync result status=\(status) attempt=\(attempt)")
+        if status != kIOReturnSuccess, attempt == 1 {
+            Thread.sleep(forTimeInterval: 0.6)
+            openSynchronously(device: device, channelID: channelID, box: box, attempt: 2)
+            return
+        }
+        if status == kIOReturnSuccess, let channel {
+            box.channel = channel
+            self.finish(.success(box))
+        } else {
+            closeBaseband()
+            finish(.failure(.ConnectFailed(reason: String(format: "the channel did not open (0x%08x)", status))))
+        }
     }
 
     private func finish(_ outcome: Result<RfcommChannelBox, RfcommError>) {
@@ -354,19 +433,6 @@ private final class RfcommOpener: NSObject, IOBluetoothRFCOMMChannelDelegate, @u
         finished = true
         result = outcome
         done.signal()
-    }
-
-    // MARK: IOBluetoothRFCOMMChannelDelegate
-
-    /// Called on the main run loop when the async open completes.
-    func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, status: IOReturn, error: (any Error)!) {
-        guard !finished else { return }
-        guard status == kIOReturnSuccess, let rfcommChannel, let box else {
-            finish(.failure(.ConnectFailed(reason: String(format: "the channel did not open (0x%08x)", status))))
-            return
-        }
-        box.channel = rfcommChannel
-        finish(.success(box))
     }
 }
 

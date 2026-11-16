@@ -153,7 +153,7 @@ impl FakeAg {
                 send(s, &[&format!("+CIND: {}", names.join(",")), "OK"]);
             }
             "AT+CIND?" => send(s, &["+CIND: 0,0,1,4,0,3,0", "OK"]),
-            "AT+CMER=3,0,0,1" | "AT+CLIP=1" | "AT+CCWA=1" => send(s, &["OK"]),
+            "AT+CMER=3,0,0,1" | "AT+CMEE=1" | "AT+CLIP=1" | "AT+CCWA=1" => send(s, &["OK"]),
             "AT+CHLD=?" => send(s, &["+CHLD: (0,1,1x,2,2x,3,4)", "OK"]),
             "AT+CLCC" => {
                 let lines: Vec<String> = s
